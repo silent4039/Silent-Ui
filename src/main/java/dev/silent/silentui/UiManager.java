@@ -33,7 +33,8 @@ public final class UiManager {
     private final Map<UUID, ScreenSession> screens = new HashMap<>();
     private final Map<String, WorldUi> worlds = new LinkedHashMap<>();
     private final Map<UUID, PlaneUi> hitboxes = new HashMap<>();
-    private final Map<UUID, PendingInput> inputs = new HashMap<>();
+    /** Read from the async chat thread, so it must be concurrent. */
+    private final Map<UUID, PendingInput> inputs = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<UUID> internalTeleports = new HashSet<>();
     private final Map<UUID, Long> lastClick = new HashMap<>();
     private final File worldFile;

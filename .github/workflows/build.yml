@@ -39,6 +39,9 @@ jobs:
           echo "::error title=Build failed::$ERRS"
           exit 1
 
+      - name: Test summary
+        run: echo "::notice title=Tests::$(grep -E 'Tests run:' build.log | tail -1 | sed 's/^\[[A-Z]*\] //')"
+
       - uses: actions/upload-artifact@v4
         with:
           name: SilentUI

@@ -72,7 +72,8 @@ final class ElementView {
             }
             default -> { // rect, image
                 background = ui.spawnDisplay(TextDisplay.class, d -> { });
-                if (!s.def.text.isEmpty()) label = ui.spawnDisplay(TextDisplay.class, d -> { });
+                // rects always get a label so "Set text" works later; images only when they start with text
+                if (!"image".equals(s.type()) || !s.def.text.isEmpty()) label = ui.spawnDisplay(TextDisplay.class, d -> { });
             }
         }
         if (item != null && "head".equals(s.type())) resolveHead();
