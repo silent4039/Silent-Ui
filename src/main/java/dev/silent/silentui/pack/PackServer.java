@@ -52,7 +52,12 @@ public final class PackServer {
 
     public void start() throws IOException {
         try (InputStream in = PackServer.class.getResourceAsStream("/editor/index.html")) {
-            editorHtml = in == null ? "<h1>Editor missing from jar</h1>".getBytes(StandardCharsets.UTF_8) : in.readAllBytes();
+            String body = in == null ? "<h1>Editor missing from jar</h1>" : new String(in.readAllBytes(), StandardCharsets.UTF_8);
+            // the editor file is a page body (it is also published as a hosted artifact), so wrap it in a document here
+            String page = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+                    + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
+                    + "</head><body>" + body + "</body></html>";
+            editorHtml = page.getBytes(StandardCharsets.UTF_8);
         }
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.setExecutor(Executors.newFixedThreadPool(4, r -> {

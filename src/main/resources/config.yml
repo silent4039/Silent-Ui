@@ -38,7 +38,7 @@ screen:
   view-fill: 0.82
   # Field of view assumed for sizing (vanilla default is 70)
   fov: 70
-  # Seconds a click is ignored after opening (prevents the opening click from clicking a button)
+  # Ticks a click is ignored after opening (prevents the opening click from clicking a button)
   open-click-grace-ticks: 6
   # Ticks between placeholder refreshes for text inside screen/world UIs
   text-refresh-ticks: 10

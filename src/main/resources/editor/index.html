@@ -1,1 +1,2356 @@
-<!doctype html><title>Silent UI editor</title><p>Editor coming in the next commit.</p>
+<title>Silent UI Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Pixelify+Sans:wght@400;600&display=swap">
+<style>
+/* Layout: editor shell — top bar, tool rail, canvas stage + timeline dock, inspector, status line. Dark-first, single look. */
+:root{
+  color-scheme: dark;
+  --bg:#0c0b0f; --stage:#08070a; --panel:#121117; --panel2:#18161e; --raise:#1f1c26; --line:#26222e; --line2:#332e3d;
+  --text:#ece8f2; --muted:#8e879a; --faint:#5d5768;
+  --accent:#ff8fd1; --accent-ink:#2a0d1f; --accent-soft:rgba(255,143,209,.14);
+  --blue:#8fc8ff; --violet:#b9a2ff; --ok:#74e0ac; --warn:#ffd27a; --danger:#ff7088;
+  --ui:'Manrope',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --mc:'Pixelify Sans','Courier New',monospace;
+  --r:8px;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:13px/1.4 var(--ui);overflow:hidden;
+  padding-left:max(0px, env(safe-area-inset-left,0px));padding-right:max(0px, env(safe-area-inset-right,0px))}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:10px;border:3px solid transparent;background-clip:padding-box}
+
+#app{display:grid;height:100%;grid-template-columns:56px minmax(0,1fr) 304px;grid-template-rows:48px minmax(0,1fr) 26px;
+  grid-template-areas:"top top top" "rail main side" "status status status"}
+#top{grid-area:top;display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;letter-spacing:.2px;margin-right:10px;white-space:nowrap}
+.brand .mark{width:26px;height:26px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font:700 13px var(--mc)}
+.brand .tag{font-size:10px;font-weight:800;background:var(--text);color:var(--bg);padding:1px 6px;border-radius:5px;text-transform:uppercase;letter-spacing:.6px}
+.menus{display:flex;gap:2px}
+.menu{position:relative}
+.menu>button{background:none;border:0;color:var(--muted);padding:6px 9px;border-radius:6px}
+.menu>button:hover,.menu.open>button{background:var(--raise);color:var(--text)}
+.dropdown{position:absolute;top:34px;left:0;min-width:220px;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:5px;z-index:50;box-shadow:0 18px 40px rgba(0,0,0,.5)}
+.dropdown button{display:flex;justify-content:space-between;width:100%;background:none;border:0;padding:7px 9px;border-radius:6px;text-align:left;color:var(--text);gap:16px}
+.dropdown button:hover{background:var(--accent-soft)}
+.dropdown kbd{font:11px var(--mono);color:var(--faint)}
+.dropdown hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.top-mid{flex:1;display:flex;justify-content:center;min-width:0}
+.docname{background:none;border:1px solid transparent;border-radius:6px;padding:4px 8px;text-align:center;font-weight:700;max-width:260px;min-width:60px}
+.docname:hover,.docname:focus{border-color:var(--line2);background:var(--panel2)}
+.top-right{display:flex;gap:6px;align-items:center}
+.icon-btn{width:32px;height:32px;display:grid;place-items:center;border-radius:7px;border:0;background:none;color:var(--muted)}
+.icon-btn:hover{background:var(--raise);color:var(--text)}
+.icon-btn.on{background:var(--accent-soft);color:var(--accent)}
+.icon-btn svg{width:17px;height:17px}
+.btn{border:1px solid var(--line2);background:var(--raise);border-radius:7px;padding:6px 11px;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.ghost{background:none}
+.btn.danger{color:var(--danger)}
+.btn.sm{padding:3px 8px;font-size:12px}
+
+#rail{grid-area:rail;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0;border-right:1px solid var(--line);background:var(--panel);overflow-y:auto}
+#rail .icon-btn{width:38px;height:38px;border-radius:9px}
+#rail .sep{width:24px;border-top:1px solid var(--line);margin:6px 0}
+#rail .grow{flex:1}
+
+#main{grid-area:main;display:grid;grid-template-rows:38px minmax(0,1fr) auto;min-width:0;min-height:0;position:relative}
+#tabs{display:flex;align-items:center;gap:4px;padding:0 10px;border-bottom:1px solid var(--line);background:var(--panel);overflow-x:auto}
+.tab{display:flex;align-items:center;gap:6px;padding:5px 6px 5px 11px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);white-space:nowrap;font-weight:600;font-size:12px}
+.tab.active{background:var(--raise);border-color:var(--line2)}
+.tab .typ{font:10px var(--mono);color:var(--accent);text-transform:uppercase}
+.tab .x{border:0;background:none;color:var(--faint);width:18px;height:18px;border-radius:4px;line-height:1}
+.tab .x:hover{background:var(--line2);color:var(--text)}
+#stage{position:relative;overflow:hidden;background:var(--stage);touch-action:none}
+#stage.panning{cursor:grabbing}
+#board{position:absolute;left:0;top:0;transform-origin:0 0}
+.artboard{position:absolute;left:0;top:0;outline:1px solid var(--line2);
+  background-color:#141218;background-image:linear-gradient(45deg,#1b1920 25%,transparent 25%,transparent 75%,#1b1920 75%),linear-gradient(45deg,#1b1920 25%,transparent 25%,transparent 75%,#1b1920 75%);
+  background-size:16px 16px;background-position:0 0,8px 8px}
+.artboard .hudmid{position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed rgba(255,143,209,.25);pointer-events:none}
+.artboard-label{position:absolute;top:-22px;left:0;font:11px var(--mono);color:var(--muted);white-space:nowrap}
+.el{position:absolute;image-rendering:pixelated}
+.el .bg{position:absolute;inset:0;background-size:100% 100%;background-repeat:no-repeat;image-rendering:pixelated}
+.el .fillbar{position:absolute;left:0;top:0;bottom:0;background-size:100% 100%;image-rendering:pixelated}
+.el .lbl{position:absolute;inset:0;display:flex;align-items:center;font-family:var(--mc);white-space:pre-wrap;overflow-wrap:anywhere;pointer-events:none;line-height:1}
+.el.hidden-el{outline:1px dashed var(--faint);opacity:.28!important}
+.el .ph{position:absolute;inset:0;display:grid;place-items:center;background:rgba(143,200,255,.08);outline:1px dashed rgba(143,200,255,.4);font:9px var(--mono);color:var(--blue);text-align:center;overflow:hidden}
+.sel{position:absolute;pointer-events:none;outline:calc(1.5px * var(--inv)) solid var(--accent)}
+.sel.multi{outline-style:dashed}
+.handle{position:absolute;width:calc(9px * var(--inv));height:calc(9px * var(--inv));background:var(--bg);border:calc(1.5px * var(--inv)) solid var(--accent);border-radius:calc(2px * var(--inv));pointer-events:auto;transform:translate(-50%,-50%)}
+.handle.rot{border-radius:50%;background:var(--accent)}
+.rotline{position:absolute;left:50%;width:0;border-left:calc(1px * var(--inv)) solid var(--accent);top:calc(-18px * var(--inv));height:calc(18px * var(--inv))}
+.guide{position:absolute;background:var(--blue);pointer-events:none}
+.marquee{position:absolute;border:1px solid var(--accent);background:var(--accent-soft);pointer-events:none}
+.hoverbox{position:absolute;pointer-events:none;outline:calc(1px * var(--inv)) solid rgba(143,200,255,.7)}
+.zoomctl{position:absolute;right:12px;bottom:12px;display:flex;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px;align-items:center}
+.zoomctl span{font:11px var(--mono);color:var(--muted);min-width:44px;text-align:center}
+.zoomctl .icon-btn{width:26px;height:26px}
+.hint{position:absolute;left:12px;bottom:12px;font-size:11px;color:var(--faint);pointer-events:none}
+
+#side{grid-area:side;border-left:1px solid var(--line);background:var(--panel);display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0}
+.sidetabs{display:flex;gap:2px;padding:8px 10px 0;border-bottom:1px solid var(--line)}
+.sidetabs button{flex:1;background:none;border:0;padding:8px 4px 9px;color:var(--muted);font-weight:700;border-bottom:2px solid transparent}
+.sidetabs button.on{color:var(--text);border-bottom-color:var(--accent)}
+#panel{overflow-y:auto;padding:4px 0 30px}
+.sec{padding:12px 14px;border-bottom:1px solid var(--line)}
+.sec h4{margin:0 0 10px;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:center}
+.row{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;gap:8px;margin-bottom:7px}
+.row label,.lab{color:var(--muted);font-size:12px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:7px}
+.num{display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:0 0 0 8px;min-width:0}
+.num b{font:600 11px var(--mono);color:var(--faint);cursor:ew-resize;user-select:none;min-width:12px;margin-right:2px}
+input[type=color].inp{width:56px;height:30px;padding:2px;flex:none}
+.num input{border:0;background:none;width:100%;min-width:0;padding:6px 6px;font:12px var(--mono)}
+.num.keyed{border-color:var(--accent)}
+.inp,select.inp,textarea.inp{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:12px;min-width:0}
+textarea.inp{resize:vertical;min-height:54px;font-family:var(--mono)}
+.inp:focus,.num:focus-within{border-color:var(--accent);outline:none}
+.color{display:flex;gap:6px;align-items:center}
+.color input[type=color]{width:30px;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);padding:2px}
+.check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text);margin-bottom:7px;cursor:pointer}
+.check input{accent-color:var(--accent);width:15px;height:15px}
+.seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:7px;padding:2px;gap:2px}
+.seg button{flex:1;border:0;background:none;padding:4px 6px;border-radius:5px;color:var(--muted);font-size:12px;font-weight:600}
+.seg button.on{background:var(--raise);color:var(--text)}
+.anchor{display:grid;grid-template-columns:repeat(3,22px);gap:4px}
+.anchor button{width:22px;height:22px;border:1px solid var(--line2);background:var(--panel2);border-radius:5px;padding:0}
+.anchor button.on{background:var(--accent);border-color:var(--accent)}
+.empty{color:var(--faint);padding:30px 14px;text-align:center}
+.layers{list-style:none;margin:0;padding:6px}
+.layer{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:7px;cursor:pointer;border:1px solid transparent}
+.layer:hover{background:var(--panel2)}
+.layer.on{background:var(--accent-soft);border-color:rgba(255,143,209,.35)}
+.layer.drop-above{box-shadow:inset 0 2px 0 var(--accent)}
+.layer.drop-below{box-shadow:inset 0 -2px 0 var(--accent)}
+.layer .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.layer .ty{font:10px var(--mono);color:var(--faint)}
+.layer .mini{width:24px;height:24px;border:0;background:none;color:var(--faint);border-radius:5px;display:grid;place-items:center}
+.layer .mini:hover{color:var(--text);background:var(--line)}
+.layer .mini svg{width:14px;height:14px}
+.layer .mini.off{color:var(--danger)}
+
+#status{grid-area:status;display:flex;align-items:center;gap:16px;padding:0 12px;border-top:1px solid var(--line);background:var(--panel);font:11px var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden}
+#status .sp{flex:1}
+
+/* timeline dock */
+#dock{border-top:1px solid var(--line);background:var(--panel);height:230px;display:grid;grid-template-rows:38px minmax(0,1fr);min-height:0}
+#dock[hidden]{display:none!important}
+.dockbar{display:flex;align-items:center;gap:8px;padding:0 10px;border-bottom:1px solid var(--line);overflow-x:auto}
+.dockbar .time{font:12px var(--mono);color:var(--text);min-width:86px}
+.dockbar select,.dockbar input{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:12px}
+.tl{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:0;overflow:hidden}
+.tl-left{border-right:1px solid var(--line);overflow-y:auto}
+.tl-row{height:28px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;font-size:12px;color:var(--muted);border-bottom:1px solid rgba(38,34,46,.6)}
+.tl-row.head{color:var(--text);font-weight:700;background:var(--panel2);height:26px}
+.tl-row button{border:0;background:none;color:var(--faint);font-size:15px;width:20px;height:20px;border-radius:4px;line-height:1}
+.tl-row button:hover{color:var(--accent);background:var(--line)}
+.tl-right{position:relative;overflow:auto}
+.ruler{position:sticky;top:0;height:26px;background:var(--panel2);border-bottom:1px solid var(--line);z-index:2;cursor:pointer}
+.ruler span{position:absolute;top:6px;font:10px var(--mono);color:var(--faint);transform:translateX(-50%)}
+.ruler i{position:absolute;bottom:0;width:1px;height:6px;background:var(--line2)}
+.track{height:28px;position:relative;border-bottom:1px solid rgba(38,34,46,.6)}
+.track .bar{position:absolute;top:13px;height:2px;background:var(--line2)}
+.kf{position:absolute;top:8px;width:12px;height:12px;transform:translateX(-50%) rotate(45deg);background:var(--blue);border:2px solid var(--panel);cursor:grab}
+.kf.on{background:var(--accent)}
+.playhead{position:absolute;top:0;bottom:0;width:0;border-left:1.5px solid var(--accent);pointer-events:none;z-index:3}
+.playhead::before{content:"";position:absolute;top:0;left:-6px;border:6px solid transparent;border-top:8px solid var(--accent)}
+.endline{position:absolute;top:0;bottom:0;border-left:1px dashed var(--faint);pointer-events:none}
+
+/* script editor */
+#script{position:absolute;inset:0;background:var(--bg);display:grid;grid-template-columns:220px minmax(0,1fr);grid-template-rows:44px minmax(0,1fr);z-index:20}
+#script[hidden]{display:none!important}
+.sc-top{grid-column:1/3;display:flex;align-items:center;gap:8px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel)}
+.sc-top .ttl{font-weight:700;flex:1}
+.palette{border-right:1px solid var(--line);background:var(--panel);overflow-y:auto;padding:10px}
+.palette .grp{margin:12px 2px 4px;font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:6px}
+.palette .grp i{width:7px;height:7px;border-radius:50%}
+.palette button{display:block;width:100%;text-align:left;background:none;border:0;padding:5px 8px;border-radius:6px;color:var(--text);font-size:12.5px}
+.palette button:hover{background:var(--raise)}
+#nodes{position:relative;overflow:hidden;background-color:var(--bg);background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:22px 22px;touch-action:none}
+#nodeLayer{position:absolute;left:0;top:0;transform-origin:0 0}
+#wires{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+#wires path{fill:none;stroke:var(--accent);stroke-width:2.2;pointer-events:stroke;cursor:pointer}
+#wires path.f{stroke:var(--danger)}
+#wires path.t{stroke:var(--ok)}
+#wires path:hover{stroke-width:4}
+#wires path.temp{stroke-dasharray:6 5;pointer-events:none}
+.node{position:absolute;width:236px;background:var(--panel2);border:1px solid var(--line2);border-radius:11px;box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.node.on{border-color:var(--accent)}
+.node .nh{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line);cursor:grab;font-weight:700;font-size:12.5px}
+.node .nh i{width:9px;height:9px;border-radius:3px;flex:none}
+.node .nh .del{margin-left:auto;border:0;background:none;color:var(--faint);width:20px;height:20px;border-radius:4px}
+.node .nh .del:hover{color:var(--danger);background:var(--line)}
+.node .nb{padding:8px 10px 6px}
+.node .nf{display:grid;grid-template-columns:70px minmax(0,1fr);gap:6px;align-items:center;margin-bottom:6px;font-size:11.5px;color:var(--muted)}
+.node .nf .inp{padding:4px 6px;font-size:11.5px}
+.node .outs{display:flex;flex-direction:column;align-items:flex-end;gap:4px;padding:2px 0 8px}
+.node .out{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-right:-17px}
+.port{width:13px;height:13px;border-radius:50%;background:var(--panel);border:2px solid var(--faint);cursor:crosshair}
+.port.in{position:absolute;left:-7px;top:12px}
+.out .port{border-color:var(--accent)}
+.out.true .port{border-color:var(--ok)}
+.out.false .port{border-color:var(--danger)}
+.node.drop{box-shadow:0 0 0 2px var(--accent)}
+
+/* modal + toast */
+.modal-bg{position:fixed;inset:0;background:rgba(5,4,8,.66);display:grid;place-items:center;z-index:100;padding:16px}
+.modal{width:min(620px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:0 30px 70px rgba(0,0,0,.6)}
+.modal header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800}
+.modal .body{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.modal footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.modal p{margin:0;color:var(--muted)}
+.modal pre,.modal textarea.code{background:var(--stage);border:1px solid var(--line);border-radius:8px;padding:10px;font:11.5px/1.5 var(--mono);color:var(--text);max-height:340px;overflow:auto;width:100%;white-space:pre}
+.sprites{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.sprite{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.sprite .th{height:72px;border-radius:6px;display:grid;place-items:center;background-color:#141218;background-image:linear-gradient(45deg,#1b1920 25%,transparent 25%,transparent 75%,#1b1920 75%),linear-gradient(45deg,#1b1920 25%,transparent 25%,transparent 75%,#1b1920 75%);background-size:12px 12px;background-position:0 0,6px 6px}
+.sprite .th img{max-width:90%;max-height:64px;image-rendering:pixelated}
+.sprite .meta{font:10px var(--mono);color:var(--faint)}
+.sprite .acts{display:flex;gap:4px}
+.drop{border:1.5px dashed var(--line2);border-radius:10px;padding:18px;text-align:center;color:var(--muted)}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+.toasts{position:fixed;right:16px;bottom:34px;display:flex;flex-direction:column;gap:8px;z-index:200;pointer-events:none}
+.toast{background:var(--raise);border:1px solid var(--line2);padding:9px 13px;border-radius:9px;box-shadow:0 10px 30px rgba(0,0,0,.4);font-weight:600;max-width:360px}
+.toast.err{border-color:var(--danger)}
+.toast.ok{border-color:var(--ok)}
+
+/* preview */
+#preview{position:absolute;inset:0;z-index:30;background:radial-gradient(120% 90% at 50% 0%,#3b5a3a 0%,#22331f 45%,#121a10 100%);overflow:hidden;cursor:crosshair}
+#preview[hidden]{display:none!important}
+#preview .scene{position:absolute;inset:0;background:linear-gradient(transparent 55%,rgba(0,0,0,.35)),repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 40px,transparent 40px 80px);pointer-events:none}
+#preview .pv-board{position:absolute;transform-origin:0 0}
+#preview .pv-dim{position:absolute;inset:0;background:#000;pointer-events:none}
+#preview .chat{position:absolute;left:12px;bottom:46px;display:flex;flex-direction:column;gap:2px;max-width:60%;pointer-events:none}
+#preview .chat div{background:rgba(0,0,0,.45);padding:2px 6px;font:13px var(--mc);color:#fff}
+#preview .pv-bar{position:absolute;left:50%;top:10px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:rgba(10,9,13,.8);border:1px solid var(--line2);border-radius:10px;padding:5px 6px 5px 12px;font-size:12px;z-index:5;cursor:default}
+#preview .hotbar{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);display:flex;gap:2px;pointer-events:none}
+#preview .hotbar i{width:30px;height:30px;background:rgba(0,0,0,.45);border:2px solid rgba(120,120,120,.6)}
+#preview .hotbar i.on{border-color:#fff}
+#preview .xhair{position:absolute;width:15px;height:15px;transform:translate(-50%,-50%);pointer-events:none;mix-blend-mode:difference}
+#preview .xhair::before,#preview .xhair::after{content:"";position:absolute;background:#fff}
+#preview .xhair::before{left:7px;top:0;width:1px;height:15px}
+#preview .xhair::after{top:7px;left:0;height:1px;width:15px}
+#preview .pv-title{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;font:700 42px var(--mc);color:#fff;text-shadow:3px 3px 0 #3f3f3f;text-align:center}
+#preview .pv-fade{position:absolute;inset:0;pointer-events:none;opacity:0}
+#preview .bossbar{position:absolute;left:50%;top:0;width:0;height:0}
+
+@media (max-width: 860px){
+  #app{grid-template-columns:minmax(0,1fr);grid-template-rows:48px 46px minmax(0,1fr) 42vh 24px;grid-template-areas:"top" "rail" "main" "side" "status"}
+  #rail{flex-direction:row;padding:0 8px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden}
+  #rail .sep{width:0;height:22px;border-top:0;border-left:1px solid var(--line);margin:0 4px}
+  #rail .grow{display:none}
+  #side{border-left:0;border-top:1px solid var(--line)}
+  .menus .menu:nth-child(n+3){display:none}
+  .brand .tag,.top-right .hide-sm{display:none}
+  .tl{grid-template-columns:130px minmax(0,1fr)}
+  #script{grid-template-columns:150px minmax(0,1fr)}
+}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div id="app">
+  <header id="top">
+    <div class="brand"><div class="mark">S</div>Silent <span class="tag">UI</span></div>
+    <nav class="menus" id="menus"></nav>
+    <div class="top-mid"><input class="docname" id="docname" aria-label="UI name" spellcheck="false"></div>
+    <div class="top-right">
+      <button class="icon-btn" id="undoBtn" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="icon-btn" id="redoBtn" title="Redo (Ctrl+Shift+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      <button class="btn ghost hide-sm" id="previewBtn" title="Preview (P)">▶ Preview</button>
+      <button class="btn hide-sm" id="pushBtn">Push to server</button>
+      <button class="btn primary" id="exportBtn">Export</button>
+    </div>
+  </header>
+  <aside id="rail"></aside>
+  <section id="main">
+    <div id="tabs"></div>
+    <div id="stage">
+      <div id="board"></div>
+      <div class="hint" id="hint">Space + drag to pan · Ctrl + scroll to zoom</div>
+      <div class="zoomctl">
+        <button class="icon-btn" id="zoomOut" title="Zoom out">−</button>
+        <span id="zoomLbl">100%</span>
+        <button class="icon-btn" id="zoomIn" title="Zoom in">+</button>
+        <button class="icon-btn" id="zoomFit" title="Fit (Shift+1)">⤢</button>
+      </div>
+    </div>
+    <div id="dock" hidden></div>
+    <div id="script" hidden></div>
+    <div id="preview" hidden></div>
+  </section>
+  <aside id="side">
+    <div class="sidetabs" id="sidetabs">
+      <button data-t="props" class="on">Properties</button>
+      <button data-t="design">Design</button>
+      <button data-t="layers">Layers</button>
+    </div>
+    <div id="panel"></div>
+  </aside>
+  <footer id="status"></footer>
+</div>
+<div class="toasts" id="toasts"></div>
+<input type="file" id="fileOpen" accept=".json,application/json" hidden>
+<input type="file" id="fileSprite" accept="image/png,image/*" multiple hidden>
+<script>
+"use strict";
+/* ============================================================== utilities */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const clone = o => JSON.parse(JSON.stringify(o));
+const rid = (p = 'el') => p + Math.random().toString(36).slice(2, 8);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const round = (v, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
+function h(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k.nodeType ? k : document.createTextNode(k));
+  return e;
+}
+function toast(msg, kind = '') {
+  const t = h('div', {class: 'toast ' + kind}, msg);
+  $('#toasts').append(t);
+  setTimeout(() => t.remove(), 3200);
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('silentui.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('silentui.' + k, JSON.stringify(v)); } catch { /* storage unavailable */ } }
+};
+const ICON = {
+  select: '<path d="M5 3l14 8-6 2-3 6z"/>',
+  rect: '<rect x="4" y="6" width="16" height="12" rx="2"/>',
+  text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
+  button: '<rect x="3" y="7" width="18" height="10" rx="5"/><path d="M8 12h8"/>',
+  image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  input: '<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 10v4"/>',
+  progress: '<rect x="3" y="9" width="18" height="6" rx="3"/><path d="M5 12h7" stroke-width="3"/>',
+  item: '<path d="M12 3 4 7.5v9L12 21l8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/>',
+  head: '<rect x="5" y="5" width="14" height="14" rx="1"/><path d="M9 10h.01M15 10h.01M9 15h6"/>',
+  sprites: '<path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4z"/><path d="m14 17 2 2 4-4"/>',
+  timeline: '<path d="M4 6h16M4 12h16M4 18h16"/><path d="M8 4v4M15 10v4M11 16v4"/>',
+  script: '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H13a3 3 0 0 1 3 3v6.5"/>',
+  code: '<path d="m8 8-4 4 4 4M16 8l4 4-4 4"/>',
+  eye: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/>',
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  unlock: '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/>',
+  doc: '<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/>'
+};
+const svg = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${ICON[name] || ''}</svg>`;
+
+/* ============================================================== model */
+const TYPES = ['rect', 'text', 'button', 'image', 'input', 'progress', 'item', 'head'];
+const ANIM_PROPS = ['x', 'y', 'w', 'h', 'scale', 'rotation', 'opacity'];
+function defaultsFor(type) {
+  const base = {id: '', name: 'Element', type, x: 0, y: 0, w: 64, h: 32, rotation: 0, opacity: 1, scale: 1, visible: true, blocked: false,
+    anchor: 'center', fill: '#2a2633', fillEnabled: true, sprite: '', text: '', textColor: '#ffffff', textSize: 1, align: 'center', shadow: true,
+    hoverFill: '', hoverSprite: '', hoverTextColor: '', hoverScale: 1, item: 'minecraft:diamond', headOwner: '', value: '50', max: '100',
+    barColor: '#ff8fd1', barSprite: '', placeholder: 'Type...'};
+  const per = {
+    rect: {name: 'Block', w: 80, h: 40},
+    text: {name: 'Text', w: 120, h: 12, text: 'Hello <#ff8fd1>{player}</#ff8fd1>', fillEnabled: false},
+    button: {name: 'Button', w: 90, h: 22, fill: '#ff8fd1', text: 'Click me', textColor: '#2a0d1f', shadow: false, hoverFill: '#ffb6e2', hoverScale: 1.05},
+    image: {name: 'Image', w: 32, h: 32, fillEnabled: false},
+    input: {name: 'Input', w: 130, h: 18, fill: '#1c1a22', text: '', align: 'left'},
+    progress: {name: 'Progress', w: 120, h: 6},
+    item: {name: 'Item', w: 24, h: 24, fillEnabled: false},
+    head: {name: 'Head', w: 32, h: 32, fillEnabled: false}
+  };
+  return Object.assign(base, per[type] || {});
+}
+function newDoc(type = 'screen', name = 'Untitled') {
+  const dims = type === 'world' ? [400, 240] : [480, 270];
+  return {format: 1, id: slug(name) || 'ui', name, type, canvas: {width: dims[0], height: dims[1]},
+    settings: {command: '', permission: '', freeze: true, closeOnSneak: true, clampCursor: true, dim: type === 'screen' ? 0.3 : 0,
+      cursorSprite: '', screenSize: 1, autoShow: false, worldScale: 1},
+    sprites: [], elements: [], animations: [], script: {nodes: []}};
+}
+function slug(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 48); }
+function normalize(d) {
+  const n = newDoc(d.type || 'screen', d.name || 'UI');
+  const out = Object.assign(n, d);
+  out.canvas = Object.assign(n.canvas, d.canvas || {});
+  out.settings = Object.assign(newDoc().settings, d.settings || {});
+  out.sprites = (d.sprites || []).filter(s => s && s.id && s.data);
+  out.elements = (d.elements || []).map(e => Object.assign(defaultsFor(e.type || 'rect'), e));
+  out.animations = (d.animations || []).map(a => Object.assign({id: rid('an'), name: 'Animation', length: 20, loop: false, autoplay: false, tracks: []}, a));
+  out.script = {nodes: ((d.script && d.script.nodes) || []).map(nd => Object.assign({props: {}, next: {}}, nd))};
+  out.id = slug(out.id) || slug(out.name) || 'ui';
+  return out;
+}
+
+/* ============================================================== state */
+const S = {
+  docs: [], cur: 0, sel: [], tool: 'select', zoom: 1, panX: 40, panY: 40, side: 'props',
+  dock: false, scriptOpen: false, anim: {id: null, t: 0, playing: false, auto: false, selKey: null},
+  undo: [], redo: [], clip: null, hover: null, guides: [], spaceDown: false, imgs: {}
+};
+const doc = () => S.docs[S.cur];
+const els = () => doc().elements;
+const byId = id => els().find(e => e.id === id);
+const selected = () => S.sel.map(byId).filter(Boolean);
+
+function snapshot() { return JSON.stringify(doc()); }
+function pushUndo(snap) {
+  S.undo.push(snap ?? snapshot());
+  if (S.undo.length > 120) S.undo.shift();
+  S.redo = [];
+}
+/** Run a change with undo support. */
+function mutate(fn, opts = {}) {
+  pushUndo();
+  fn(doc());
+  afterChange(opts);
+}
+let saveTimer = 0;
+function afterChange(opts = {}) {
+  render(opts);
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveLocal, 400);
+}
+function undo() {
+  if (!S.undo.length) return toast('Nothing to undo');
+  S.redo.push(snapshot());
+  S.docs[S.cur] = JSON.parse(S.undo.pop());
+  S.sel = S.sel.filter(id => byId(id));
+  afterChange();
+}
+function redo() {
+  if (!S.redo.length) return toast('Nothing to redo');
+  S.undo.push(snapshot());
+  S.docs[S.cur] = JSON.parse(S.redo.pop());
+  S.sel = S.sel.filter(id => byId(id));
+  afterChange();
+}
+function saveLocal() { store.set('docs', {docs: S.docs, cur: S.cur}); }
+
+/* ============================================================== sprites */
+function spriteUrl(id) {
+  const s = doc().sprites.find(x => x.id === id);
+  return s ? s.data : '';
+}
+function loadImage(src) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
+}
+async function addSpriteFromDataUrl(dataUrl, name) {
+  let img = await loadImage(dataUrl);
+  let w = img.naturalWidth, hh = img.naturalHeight;
+  if (w > 256 || hh > 256) {
+    const f = 256 / Math.max(w, hh);
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(w * f)); c.height = Math.max(1, Math.round(hh * f));
+    const g = c.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0, c.width, c.height);
+    dataUrl = c.toDataURL('image/png'); w = c.width; hh = c.height;
+    toast('Large image scaled down to ' + w + '×' + hh);
+  } else if (!dataUrl.startsWith('data:image/png')) {
+    const c = document.createElement('canvas'); c.width = w; c.height = hh;
+    c.getContext('2d').drawImage(img, 0, 0); dataUrl = c.toDataURL('image/png');
+  }
+  let id = slug(name) || 'sprite';
+  const taken = new Set(doc().sprites.map(s => s.id));
+  let n = 2, base = id;
+  while (taken.has(id)) id = base + '_' + n++;
+  mutate(d => d.sprites.push({id, data: dataUrl, width: w, height: hh}));
+  return id;
+}
+/** Pixel-art friendly shape generator (rounded panels, circles, bars, icons). */
+function genShape(o) {
+  const c = document.createElement('canvas');
+  c.width = o.w; c.height = o.h;
+  const g = c.getContext('2d');
+  const r = Math.min(o.r || 0, Math.floor(Math.min(o.w, o.h) / 2));
+  const inside = (x, y, inset) => {
+    const w = o.w - inset * 2, hh = o.h - inset * 2, rr = Math.max(0, r - inset);
+    const px = x - inset + 0.5, py = y - inset + 0.5;
+    if (px < 0 || py < 0 || px > w || py > hh) return false;
+    if (o.kind === 'circle') { const cx = w / 2, cy = hh / 2; return ((px - cx) / (w / 2)) ** 2 + ((py - cy) / (hh / 2)) ** 2 <= 1; }
+    const cx = clamp(px, rr, w - rr), cy = clamp(py, rr, hh - rr);
+    return (px - cx) ** 2 + (py - cy) ** 2 <= rr * rr + 0.25;
+  };
+  const hex = (s, a) => { const v = parseInt((s || '#000').slice(1), 16); return [(v >> 16) & 255, (v >> 8) & 255, v & 255, Math.round(a * 255)]; };
+  const fill = hex(o.fill, o.alpha ?? 1), fill2 = hex(o.fill2 || o.fill, o.alpha ?? 1), border = hex(o.border, o.borderAlpha ?? 1);
+  const bw = o.bw || 0;
+  const im = g.createImageData(o.w, o.h);
+  for (let y = 0; y < o.h; y++) for (let x = 0; x < o.w; x++) {
+    let col = null;
+    if (inside(x, y, 0)) {
+      if (bw > 0 && !inside(x, y, bw)) col = border;
+      else {
+        const t = o.kind === 'gradient' ? x / Math.max(1, o.w - 1) : (o.vgrad ? y / Math.max(1, o.h - 1) : 0);
+        col = fill.map((v, i) => Math.round(v + (fill2[i] - v) * t));
+      }
+    }
+    if (col) { const i = (y * o.w + x) * 4; im.data.set(col, i); }
+  }
+  g.putImageData(im, 0, 0);
+  if (o.icon) drawIcon(g, o.icon, o.w, o.h, o.iconColor || '#ffffff');
+  return c.toDataURL('image/png');
+}
+function drawIcon(g, kind, w, hh, color) {
+  g.fillStyle = color;
+  const P = (x, y, ww = 1, h2 = 1) => g.fillRect(x, y, ww, h2);
+  const s = Math.floor(Math.min(w, hh) / 8) || 1;
+  const ox = Math.floor((w - 8 * s) / 2), oy = Math.floor((hh - 8 * s) / 2);
+  const maps = {
+    close: ['X......X', '.X....X.', '..X..X..', '...XX...', '...XX...', '..X..X..', '.X....X.', 'X......X'],
+    gem: ['..XXXX..', '.X....X.', 'XXXXXXXX', 'X.X..X.X', '.X.XX.X.', '..X..X..', '...XX...', '........'],
+    clock: ['..XXXX..', '.X....X.', 'X...X..X', 'X...X..X', 'X...XXXX', 'X......X', '.X....X.', '..XXXX..'],
+    user: ['...XX...', '..XXXX..', '..XXXX..', '...XX...', '.XXXXXX.', 'XXXXXXXX', 'XXXXXXXX', '........'],
+    star: ['...XX...', '...XX...', 'XXXXXXXX', '.XXXXXX.', '..XXXX..', '.XX..XX.', 'XX....XX', '........'],
+    home: ['...XX...', '..XXXX..', '.XXXXXX.', 'XXXXXXXX', '.X....X.', '.X.XX.X.', '.X.XX.X.', '.XXXXXX.'],
+    cart: ['X.......', 'XXXXXXXX', '.X.....X', '.X....X.', '.XXXXXX.', '........', '.XX..XX.', '.XX..XX.'],
+    gear: ['...XX...', '.X.XX.X.', '..XXXX..', 'XXX..XXX', 'XXX..XXX', '..XXXX..', '.X.XX.X.', '...XX...'],
+    portal: ['.XXXXXX.', 'X......X', 'X.XXXX.X', 'X.X..X.X', 'X.X..X.X', 'X.XXXX.X', 'X......X', '.XXXXXX.'],
+    chart: ['.......X', '......XX', '.....X.X', 'X...X..X', 'XX.X...X', 'X.X....X', 'X......X', 'XXXXXXXX']
+  };
+  const m = maps[kind]; if (!m) return;
+  m.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === 'X') P(ox + x * s, oy + y * s, s, s); }));
+}
+
+/* ============================================================== templates */
+function el(type, props) { const e = Object.assign(defaultsFor(type), {id: rid()}, props); return e; }
+function node(type, x, y, props = {}, next = {}) { return {id: props.__id || rid('n'), type, x, y, props: Object.fromEntries(Object.entries(props).filter(([k]) => k !== '__id')), next}; }
+function tplMenu() {
+  const d = newDoc('screen', 'Profile Menu');
+  d.id = 'example_menu';
+  d.settings.command = 'menu';
+  d.settings.dim = 0.35;
+  d.sprites = [
+    {id: 'panel', data: genShape({w: 200, h: 236, r: 9, fill: '#1b1822', fill2: '#141119', vgrad: true, alpha: 0.94, border: '#ff8fd1', bw: 1, borderAlpha: 0.55}), width: 200, height: 236},
+    {id: 'tile', data: genShape({w: 52, h: 46, r: 6, fill: '#2a2633', alpha: 0.95}), width: 52, height: 46},
+    {id: 'tile_hover', data: genShape({w: 52, h: 46, r: 6, fill: '#3a3047', alpha: 1, border: '#ff8fd1', bw: 1}), width: 52, height: 46},
+    {id: 'close', data: genShape({w: 12, h: 12, r: 3, fill: '#2a2633', icon: 'close', iconColor: '#ff8fd1'}), width: 12, height: 12},
+    {id: 'bar', data: genShape({w: 120, h: 6, r: 3, fill: '#2a2633'}), width: 120, height: 6},
+    {id: 'ic_home', data: genShape({w: 16, h: 16, icon: 'home', iconColor: '#ff8fd1'}), width: 16, height: 16},
+    {id: 'ic_cart', data: genShape({w: 16, h: 16, icon: 'cart', iconColor: '#8fc8ff'}), width: 16, height: 16},
+    {id: 'ic_portal', data: genShape({w: 16, h: 16, icon: 'portal', iconColor: '#b9a2ff'}), width: 16, height: 16},
+    {id: 'ic_user', data: genShape({w: 16, h: 16, icon: 'user', iconColor: '#74e0ac'}), width: 16, height: 16},
+    {id: 'ic_chart', data: genShape({w: 16, h: 16, icon: 'chart', iconColor: '#ffd27a'}), width: 16, height: 16},
+    {id: 'ic_gear', data: genShape({w: 16, h: 16, icon: 'gear', iconColor: '#d6d0de'}), width: 16, height: 16}
+  ];
+  const P = {x: 140, y: 17};
+  const panel = el('image', {id: 'panel', name: 'Panel', x: P.x, y: P.y, w: 200, h: 236, sprite: 'panel', blocked: true});
+  const title = el('text', {id: 'title', name: 'Title', x: P.x + 12, y: P.y + 10, w: 150, h: 12, text: '<bold>Your Profile</bold>', align: 'left', blocked: true});
+  const close = el('image', {id: 'close', name: 'Close', x: P.x + 176, y: P.y + 10, w: 12, h: 12, sprite: 'close', hoverScale: 1.2});
+  const head = el('head', {id: 'head', name: 'Head', x: P.x + 80, y: P.y + 32, w: 40, h: 40, blocked: true});
+  const name = el('text', {id: 'name', name: 'Player name', x: P.x + 10, y: P.y + 78, w: 180, h: 12, text: '{player}', blocked: true});
+  const lvl = el('text', {id: 'level', name: 'Level', x: P.x + 10, y: P.y + 91, w: 180, h: 10, text: '<gray>Level</gray> <#ff8fd1>{level}</#ff8fd1>', textSize: 0.8, blocked: true});
+  const bar = el('progress', {id: 'xp', name: 'XP bar', x: P.x + 40, y: P.y + 106, w: 120, h: 6, sprite: 'bar', fillEnabled: true, value: '{var:xp}', max: '100', barColor: '#ff8fd1', blocked: true});
+  const out = [panel, title, close, head, name, lvl, bar];
+  const tiles = [['spawn', 'Spawn', 'ic_home', 'spawn'], ['shop', 'Shop', 'ic_cart', 'shop'], ['warps', 'Warps', 'ic_portal', 'warps'],
+    ['friends', 'Friends', 'ic_user', 'friends'], ['stats', 'Stats', 'ic_chart', 'stats'], ['settings', 'Settings', 'ic_gear', 'settings']];
+  tiles.forEach(([id, label, icon], i) => {
+    const cx = P.x + 15 + (i % 3) * 59, cy = P.y + 124 + Math.floor(i / 3) * 52;
+    out.push(el('button', {id: 't_' + id, name: label + ' tile', x: cx, y: cy, w: 52, h: 46, sprite: 'tile', hoverSprite: 'tile_hover', fillEnabled: false, text: '', hoverScale: 1.06}));
+    out.push(el('image', {id: 'i_' + id, name: label + ' icon', x: cx + 18, y: cy + 8, w: 16, h: 16, sprite: icon, blocked: true}));
+    out.push(el('text', {id: 'l_' + id, name: label + ' label', x: cx, y: cy + 30, w: 52, h: 10, text: label, textSize: 0.75, blocked: true}));
+  });
+  d.elements = out;
+  d.animations = [{id: 'intro', name: 'intro', length: 10, loop: false, autoplay: true, tracks: [
+    {element: 'panel', property: 'opacity', keys: [{t: 0, v: 0, ease: 'ease-out'}, {t: 6, v: 1, ease: 'linear'}]},
+    {element: 'panel', property: 'y', keys: [{t: 0, v: P.y + 14, ease: 'ease-out'}, {t: 8, v: P.y, ease: 'linear'}]},
+    {element: 'head', property: 'scale', keys: [{t: 0, v: 0.4, ease: 'back'}, {t: 10, v: 1, ease: 'linear'}]}
+  ]}];
+  const n = [];
+  n.push(node('on_open', 40, 40, {__id: 'n_open'}, {then: ['n_xp']}));
+  n.push(node('set_var', 320, 40, {__id: 'n_xp', name: 'xp', value: '64'}));
+  n.push(node('on_click', 40, 220, {__id: 'n_close', element: 'close', button: 'any'}, {then: ['n_closeui']}));
+  n.push(node('close_ui', 320, 220, {__id: 'n_closeui'}));
+  n.push(node('on_hover_enter', 40, 360, {__id: 'n_hov'}, {then: ['n_snd']}));
+  n.push(node('sound', 320, 360, {__id: 'n_snd', sound: 'minecraft:block.note_block.hat', volume: '0.4', pitch: '1.6'}));
+  tiles.forEach(([id, label, , cmd], i) => {
+    const y = 560 + i * 170;
+    n.push(node('on_click', 40, y, {__id: 'c_' + id, element: 't_' + id, button: 'any'}, {then: ['r_' + id]}));
+    n.push(node('run_command', 320, y, {__id: 'r_' + id, command: cmd, as: 'player'}, {then: ['x_' + id]}));
+    n.push(node('close_ui', 600, y, {__id: 'x_' + id}));
+  });
+  d.script.nodes = n;
+  return d;
+}
+function tplHud() {
+  const d = newDoc('hud', 'Stats HUD');
+  d.id = 'example_hud';
+  d.settings.autoShow = true;
+  d.sprites = [
+    {id: 'chip', data: genShape({w: 64, h: 15, r: 4, fill: '#0d0b10', alpha: 0.62}), width: 64, height: 15},
+    {id: 'chip_wide', data: genShape({w: 150, h: 13, r: 4, fill: '#0d0b10', alpha: 0.5}), width: 150, height: 13},
+    {id: 'ic_clock', data: genShape({w: 8, h: 8, icon: 'clock', iconColor: '#ffd27a'}), width: 8, height: 8},
+    {id: 'ic_gem', data: genShape({w: 8, h: 8, icon: 'gem', iconColor: '#8fc8ff'}), width: 8, height: 8},
+    {id: 'ic_user', data: genShape({w: 8, h: 8, icon: 'user', iconColor: '#74e0ac'}), width: 8, height: 8}
+  ];
+  const cx = 240, y = 22;
+  const chips = [['clock', '{time}', 'ic_clock'], ['gems', '{var:gems}', 'ic_gem'], ['online', '{online} online', 'ic_user']];
+  const out = [];
+  chips.forEach(([id, txt, ic], i) => {
+    const x = cx - 104 + i * 70;
+    out.push(el('image', {id: 'chip_' + id, name: id + ' chip', x, y, w: 64, h: 15, sprite: 'chip'}));
+    out.push(el('image', {id: 'ic_' + id, name: id + ' icon', x: x + 5, y: y + 4, w: 8, h: 8, sprite: ic}));
+    out.push(el('text', {id: 'tx_' + id, name: id + ' text', x: x + 15, y: y + 4, w: 46, h: 8, text: txt, align: 'left'}));
+  });
+  out.push(el('image', {id: 'obj_bg', name: 'Objective bg', x: cx - 75, y: y + 19, w: 150, h: 13, sprite: 'chip_wide'}));
+  out.push(el('text', {id: 'obj', name: 'Objective', x: cx - 75, y: y + 21, w: 150, h: 9, text: '<#ffd27a>Objective:</#ffd27a> find the shrine'}));
+  out.push(el('progress', {id: 'xpbar', name: 'Level bar', x: cx - 60, y: y + 36, w: 120, h: 3, fill: '#1a1720', value: '{level}', max: '50', barColor: '#ff8fd1'}));
+  d.elements = out;
+  d.script.nodes = [
+    node('on_open', 40, 40, {__id: 'h_open'}, {then: ['h_set']}),
+    node('set_var', 320, 40, {__id: 'h_set', name: 'gems', value: '250'})
+  ];
+  return d;
+}
+function tplBoard() {
+  const d = newDoc('world', 'Welcome Board');
+  d.id = 'example_board';
+  d.canvas = {width: 320, height: 180};
+  d.settings.worldScale = 1.2;
+  d.sprites = [
+    {id: 'board', data: genShape({w: 160, h: 90, r: 6, fill: '#201b29', fill2: '#120f17', vgrad: true, border: '#ff8fd1', bw: 1}), width: 160, height: 90},
+    {id: 'btn', data: genShape({w: 64, h: 20, r: 5, fill: '#ff8fd1'}), width: 64, height: 20},
+    {id: 'btn_hover', data: genShape({w: 64, h: 20, r: 5, fill: '#ffc1e6'}), width: 64, height: 20},
+    {id: 'star', data: genShape({w: 16, h: 16, icon: 'star', iconColor: '#ffd27a'}), width: 16, height: 16}
+  ];
+  d.elements = [
+    el('image', {id: 'bg', name: 'Board', x: 0, y: 0, w: 320, h: 180, sprite: 'board', blocked: true}),
+    el('image', {id: 'star', name: 'Star', x: 152, y: 18, w: 16, h: 16, sprite: 'star', blocked: true}),
+    el('text', {id: 'title', name: 'Title', x: 20, y: 40, w: 280, h: 22, text: '<bold>Welcome!</bold>', textSize: 2, blocked: true}),
+    el('text', {id: 'sub', name: 'Subtitle', x: 20, y: 70, w: 280, h: 12, text: '<gray>Look at a button and click it</gray>', blocked: true}),
+    el('button', {id: 'b_rules', name: 'Rules', x: 40, y: 110, w: 70, h: 22, sprite: 'btn', hoverSprite: 'btn_hover', fillEnabled: false, text: 'Rules'}),
+    el('button', {id: 'b_spawn', name: 'Spawn', x: 125, y: 110, w: 70, h: 22, sprite: 'btn', hoverSprite: 'btn_hover', fillEnabled: false, text: 'Spawn'}),
+    el('button', {id: 'b_hi', name: 'Wave', x: 210, y: 110, w: 70, h: 22, sprite: 'btn', hoverSprite: 'btn_hover', fillEnabled: false, text: 'Wave'}),
+    el('text', {id: 'last', name: 'Last action', x: 20, y: 148, w: 280, h: 10, text: '<dark_gray>Nobody has clicked yet</dark_gray>', textSize: 0.8, blocked: true})
+  ];
+  d.elements.filter(e => e.type === 'button').forEach(b => { b.textColor = '#2a0d1f'; b.shadow = false; });
+  d.animations = [{id: 'spin', name: 'spin', length: 40, loop: true, autoplay: true, tracks: [
+    {element: 'star', property: 'rotation', keys: [{t: 0, v: 0, ease: 'linear'}, {t: 40, v: 360, ease: 'linear'}]}]}];
+  d.script.nodes = [
+    node('on_click', 40, 40, {__id: 'w1', element: 'b_rules'}, {then: ['w2']}),
+    node('message', 320, 40, {__id: 'w2', text: '<#ff8fd1>Rules:</#ff8fd1> be kind, no griefing, have fun.'}),
+    node('on_click', 40, 220, {__id: 'w3', element: 'b_spawn'}, {then: ['w4']}),
+    node('run_command', 320, 220, {__id: 'w4', command: 'spawn', as: 'player'}),
+    node('on_click', 40, 400, {__id: 'w5', element: 'b_hi'}, {then: ['w6']}),
+    node('set_text', 320, 400, {__id: 'w6', element: 'last', text: '<gray>{player} waved hello!</gray>'}, {then: ['w7']}),
+    node('play_animation', 600, 400, {__id: 'w7', animation: 'spin'})
+  ];
+  return d;
+}
+/* ============================================================== script node catalogue (shared contract with the plugin) */
+const KEYS = ['any', 'W', 'A', 'S', 'D', 'JUMP', 'SNEAK', 'SPRINT', 'DROP', 'SWAP', 'SCROLL_UP', 'SCROLL_DOWN', 'SLOT_1', 'SLOT_2', 'SLOT_3', 'SLOT_4', 'SLOT_5', 'SLOT_6', 'SLOT_7', 'SLOT_8', 'SLOT_9'];
+const OPS = ['==', '!=', '>', '>=', '<', '<=', 'contains'];
+const F = {
+  el: (k = 'element', label = 'Element', any = false) => ({k, label, kind: 'element', any}),
+  txt: (k, label, ph = '') => ({k, label, kind: 'text', ph}),
+  num: (k, label, def = '') => ({k, label, kind: 'number', def}),
+  col: (k, label) => ({k, label, kind: 'color'}),
+  sel: (k, label, opts) => ({k, label, kind: 'select', opts}),
+  spr: (k = 'sprite', label = 'Sprite') => ({k, label, kind: 'sprite'}),
+  anim: () => ({k: 'animation', label: 'Animation', kind: 'anim'}),
+  ui: () => ({k: 'ui', label: 'UI id', kind: 'text', ph: 'example_menu'})
+};
+const NODE_TYPES = {
+  // events
+  on_open: {cat: 'event', label: 'When page opens', fields: []},
+  on_close: {cat: 'event', label: 'When page closes', fields: []},
+  on_click: {cat: 'event', label: 'When clicked', fields: [F.el('element', 'Element', true), F.sel('button', 'Button', ['any', 'left', 'right'])]},
+  on_hover_enter: {cat: 'event', label: 'When cursor enters', fields: [F.el('element', 'Element', true)]},
+  on_hover_leave: {cat: 'event', label: 'When cursor leaves', fields: [F.el('element', 'Element', true)]},
+  on_timer: {cat: 'event', label: 'Every few seconds', fields: [F.num('seconds', 'Seconds', '1')]},
+  on_key: {cat: 'event', label: 'When key pressed', fields: [F.sel('key', 'Key', KEYS)]},
+  on_text: {cat: 'event', label: 'When text is typed', fields: [F.el('element', 'Input', true)]},
+  on_command: {cat: 'event', label: 'When command is used', fields: [F.txt('command', 'Command', 'menu'), F.txt('permission', 'Permission', 'optional')]},
+  // elements
+  show: {cat: 'element', label: 'Show', fields: [F.el()]},
+  hide: {cat: 'element', label: 'Hide', fields: [F.el()]},
+  toggle: {cat: 'element', label: 'Toggle visibility', fields: [F.el()]},
+  set_text: {cat: 'element', label: 'Set text', fields: [F.el(), F.txt('text', 'Text', 'Hello {player}')]},
+  set_color: {cat: 'element', label: 'Set colour', fields: [F.el(), F.col('color', 'Colour')]},
+  set_text_color: {cat: 'element', label: 'Set text colour', fields: [F.el(), F.col('color', 'Colour')]},
+  set_sprite: {cat: 'element', label: 'Set sprite', fields: [F.el(), F.spr()]},
+  set_progress: {cat: 'element', label: 'Set progress', fields: [F.el(), F.txt('value', 'Value', '{var:xp}'), F.txt('max', 'Max', '100')]},
+  move: {cat: 'element', label: 'Move element', fields: [F.el(), F.num('x', 'X'), F.num('y', 'Y'), F.num('ticks', 'Ticks', '10')]},
+  play_animation: {cat: 'element', label: 'Play animation', fields: [F.anim()]},
+  stop_animation: {cat: 'element', label: 'Stop animation', fields: [F.anim()]},
+  focus_input: {cat: 'element', label: 'Ask for text', fields: [F.el('element', 'Input')]},
+  // player / server
+  open_ui: {cat: 'action', label: 'Open UI', fields: [F.ui()]},
+  close_ui: {cat: 'action', label: 'Close UI', fields: []},
+  run_command: {cat: 'action', label: 'Run command', fields: [F.txt('command', 'Command', 'spawn'), F.sel('as', 'As', ['player', 'console'])]},
+  message: {cat: 'action', label: 'Send message', fields: [F.txt('text', 'Text', '<#ff8fd1>Hi {player}!')]},
+  broadcast: {cat: 'action', label: 'Broadcast', fields: [F.txt('text', 'Text')]},
+  actionbar: {cat: 'action', label: 'Action bar', fields: [F.txt('text', 'Text')]},
+  title: {cat: 'action', label: 'Show title', fields: [F.txt('title', 'Title'), F.txt('subtitle', 'Subtitle'), F.num('in', 'Fade in', '10'), F.num('stay', 'Stay', '40'), F.num('out', 'Fade out', '10')]},
+  sound: {cat: 'action', label: 'Play sound', fields: [F.txt('sound', 'Sound', 'minecraft:ui.button.click'), F.num('volume', 'Volume', '1'), F.num('pitch', 'Pitch', '1')]},
+  screen_fade: {cat: 'action', label: 'Screen fade', fields: [F.col('color', 'Colour'), F.num('in', 'In', '10'), F.num('stay', 'Stay', '10'), F.num('out', 'Out', '10')]},
+  // logic
+  wait: {cat: 'logic', label: 'Wait', fields: [F.num('ticks', 'Ticks', '20')]},
+  set_var: {cat: 'logic', label: 'Set variable', fields: [F.txt('name', 'Name', 'coins'), F.txt('value', 'Value', '0')]},
+  add_var: {cat: 'logic', label: 'Add to variable', fields: [F.txt('name', 'Name', 'coins'), F.txt('amount', 'Amount', '1')]},
+  if_var: {cat: 'logic', label: 'If variable', branch: true, fields: [F.txt('name', 'Name', 'coins'), F.sel('op', 'Is', OPS), F.txt('value', 'Value', '10')]},
+  if_compare: {cat: 'logic', label: 'If compare', branch: true, fields: [F.txt('left', 'Left', '%player_level%'), F.sel('op', 'Is', OPS), F.txt('right', 'Right', '10')]},
+  if_permission: {cat: 'logic', label: 'If permission', branch: true, fields: [F.txt('permission', 'Permission', 'rank.vip')]},
+  random: {cat: 'logic', label: 'Random chance', branch: true, fields: [F.num('chance', 'Chance %', '50')]}
+};
+const CAT = {event: ['Events', '#ff8fd1'], element: ['Elements', '#8fc8ff'], action: ['Player & server', '#74e0ac'], logic: ['Logic', '#b9a2ff']};
+
+/* ============================================================== MiniMessage-ish preview */
+const NAMED = {black: '#000000', dark_blue: '#0000aa', dark_green: '#00aa00', dark_aqua: '#00aaaa', dark_red: '#aa0000', dark_purple: '#aa00aa', gold: '#ffaa00',
+  gray: '#aaaaaa', grey: '#aaaaaa', dark_gray: '#555555', dark_grey: '#555555', blue: '#5555ff', green: '#55ff55', aqua: '#55ffff', red: '#ff5555', light_purple: '#ff55ff', yellow: '#ffff55', white: '#ffffff'};
+const LEGACY = {'0': 'black', '1': 'dark_blue', '2': 'dark_green', '3': 'dark_aqua', '4': 'dark_red', '5': 'dark_purple', '6': 'gold', '7': 'gray', '8': 'dark_gray', '9': 'blue', a: 'green', b: 'aqua', c: 'red', d: 'light_purple', e: 'yellow', f: 'white'};
+function mmToHtml(src) {
+  let s = String(src ?? '');
+  if (s.includes('&') && !s.includes('<')) {
+    s = s.replace(/&([0-9a-fk-or])/gi, (_, c) => { c = c.toLowerCase(); return LEGACY[c] ? `<${LEGACY[c]}>` : c === 'l' ? '<bold>' : c === 'o' ? '<italic>' : c === 'n' ? '<underlined>' : c === 'r' ? '<reset>' : ''; });
+  }
+  let out = '', stack = 0;
+  const re = /<(\/?)([#a-z_0-9:]+)>/gi;
+  let last = 0, m;
+  while ((m = re.exec(s))) {
+    out += esc(s.slice(last, m.index));
+    last = re.lastIndex;
+    const close = m[1] === '/', tag = m[2].toLowerCase();
+    if (close) { if (stack > 0) { out += '</span>'; stack--; } continue; }
+    let style = null;
+    if (/^#[0-9a-f]{6}$/.test(tag)) style = 'color:' + tag;
+    else if (tag.startsWith('color:')) style = 'color:' + (NAMED[tag.slice(6)] || tag.slice(6));
+    else if (NAMED[tag]) style = 'color:' + NAMED[tag];
+    else if (tag === 'bold' || tag === 'b') style = 'font-weight:700';
+    else if (tag === 'italic' || tag === 'i' || tag === 'em') style = 'font-style:italic';
+    else if (tag === 'underlined' || tag === 'u') style = 'text-decoration:underline';
+    else if (tag === 'strikethrough' || tag === 'st') style = 'text-decoration:line-through';
+    else if (tag === 'reset') { out += '</span>'.repeat(stack); stack = 0; continue; }
+    else if (tag === 'newline' || tag === 'br') { out += '\n'; continue; }
+    if (style) { out += `<span style="${style}">`; stack++; }
+  }
+  out += esc(s.slice(last)) + '</span>'.repeat(stack);
+  return out;
+}
+const PV_VARS = {};
+function resolve(s, vars = PV_VARS) {
+  const now = new Date();
+  return String(s ?? '')
+    .replace(/\{player}/g, 'Silent').replace(/\{online}/g, '12').replace(/\{max_players}/g, '100').replace(/\{level}/g, '27')
+    .replace(/\{health}/g, '20').replace(/\{food}/g, '20').replace(/\{ping}/g, '24').replace(/\{world}/g, 'world')
+    .replace(/\{x}/g, '128').replace(/\{y}/g, '64').replace(/\{z}/g, '-40').replace(/\{uuid}/g, '0000-…')
+    .replace(/\{time}/g, now.toTimeString().slice(0, 8)).replace(/\{date}/g, now.toISOString().slice(0, 10))
+    .replace(/\{var:([A-Za-z0-9_.-]+)}/g, (_, k) => vars[k] ?? '')
+    .replace(/\{(arg\d|args|text|key|button|element)}/g, '');
+}
+
+/* ============================================================== element values (base + animation preview) */
+function sampleKeys(keys, t) {
+  if (!keys.length) return 0;
+  if (t <= keys[0].t) return keys[0].v;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const a = keys[i], b = keys[i + 1];
+    if (t >= a.t && t <= b.t) {
+      if (b.t === a.t) return b.v;
+      if (a.ease === 'step') return t >= b.t ? b.v : a.v;
+      return a.v + (b.v - a.v) * ease(a.ease, (t - a.t) / (b.t - a.t));
+    }
+  }
+  return keys[keys.length - 1].v;
+}
+function ease(type, f) {
+  switch (type) {
+    case 'ease-in': return f * f;
+    case 'ease-out': return 1 - (1 - f) * (1 - f);
+    case 'ease-in-out': return f < .5 ? 2 * f * f : 1 - Math.pow(-2 * f + 2, 2) / 2;
+    case 'back': { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(f - 1, 3) + c1 * Math.pow(f - 1, 2); }
+    case 'bounce': { const n1 = 7.5625, d1 = 2.75; let x = f; if (x < 1 / d1) return n1 * x * x; if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + .75; if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + .9375; return n1 * (x -= 2.625 / d1) * x + .984375; }
+    default: return f;
+  }
+}
+const curAnim = () => doc().animations.find(a => a.id === S.anim.id) || null;
+function track(a, elId, prop, create = false) {
+  let t = a.tracks.find(t => t.element === elId && t.property === prop);
+  if (!t && create) { t = {element: elId, property: prop, keys: []}; a.tracks.push(t); }
+  return t;
+}
+/** Value of an element as shown in the editor right now. */
+function vals(e) {
+  const v = {...e};
+  const a = S.dock ? curAnim() : null;
+  if (a) for (const p of ANIM_PROPS) { const t = track(a, e.id, p); if (t && t.keys.length) v[p] = sampleKeys(t.keys, S.anim.t); }
+  return v;
+}
+/** Sets a property; with auto-key on and an animation selected, writes a keyframe instead. */
+function setProp(e, prop, value) {
+  const a = curAnim();
+  if (S.dock && a && S.anim.auto && ANIM_PROPS.includes(prop)) {
+    const t = track(a, e.id, prop, true);
+    const k = t.keys.find(k => k.t === Math.round(S.anim.t));
+    if (k) k.v = value; else { t.keys.push({t: Math.round(S.anim.t), v: value, ease: 'linear'}); t.keys.sort((x, y) => x.t - y.t); }
+  } else e[prop] = value;
+}
+function isKeyed(e, prop) {
+  const a = S.dock ? curAnim() : null;
+  const t = a && track(a, e.id, prop);
+  return !!(t && t.keys.length);
+}
+
+/* ============================================================== canvas rendering */
+const stage = $('#stage'), board = $('#board');
+function anchorOrigin(a) {
+  const x = a.includes('left') ? '0%' : a.includes('right') ? '100%' : '50%';
+  const y = a.startsWith('top') ? '0%' : a.startsWith('bottom') ? '100%' : '50%';
+  return x + ' ' + y;
+}
+function elNode(e, v, opts = {}) {
+  const hov = opts.hover;
+  const d = h('div', {class: 'el', 'data-id': e.id});
+  const sc = (v.scale ?? 1) * (hov ? e.hoverScale || 1 : 1);
+  Object.assign(d.style, {left: v.x + 'px', top: v.y + 'px', width: Math.max(0, v.w) + 'px', height: Math.max(0, v.h) + 'px',
+    opacity: clamp(v.opacity, 0, 1), transformOrigin: anchorOrigin(e.anchor || 'center'),
+    transform: `rotate(${v.rotation || 0}deg) scale(${sc})`, transition: opts.preview ? 'transform .12s, opacity .12s' : ''});
+  if (!v.visible && !opts.preview) d.classList.add('hidden-el');
+  if (!v.visible && opts.preview) d.style.display = 'none';
+  const sprite = hov && e.hoverSprite ? e.hoverSprite : (v.sprite ?? e.sprite);
+  const fill = hov && e.hoverFill ? e.hoverFill : (v.fill ?? e.fill);
+  if (e.type === 'item' || e.type === 'head') {
+    if (e.fillEnabled) d.append(h('div', {class: 'bg', style: {background: fill}}));
+    d.append(h('div', {class: 'ph', html: e.type === 'head' ? headSvg() : `${svg('item', 'style="width:60%;height:60%"')}`, title: e.type === 'head' ? 'Player head' : e.item}));
+    return d;
+  }
+  if (sprite && spriteUrl(sprite)) d.append(h('div', {class: 'bg', style: {backgroundImage: `url("${spriteUrl(sprite)}")`}}));
+  else if (e.fillEnabled) d.append(h('div', {class: 'bg', style: {background: fill}}));
+  if (e.type === 'progress') {
+    const vars = opts.vars || PV_VARS;
+    const rawV = resolve(v.value ?? e.value, vars), mx = Number(resolve(v.max ?? e.max, vars)) || 100;
+    const vv = rawV.trim() === '' || isNaN(Number(rawV)) ? (opts.preview ? 0 : mx * 0.6) : Number(rawV);
+    const f = clamp(vv / mx, 0, 1);
+    const fb = h('div', {class: 'fillbar', style: {width: (f * 100) + '%'}});
+    if (e.barSprite && spriteUrl(e.barSprite)) fb.style.backgroundImage = `url("${spriteUrl(e.barSprite)}")`;
+    else fb.style.background = e.barColor;
+    d.append(fb);
+  }
+  let text = v.text ?? e.text;
+  let ph = false;
+  if (e.type === 'input' && !text) { text = e.placeholder; ph = true; }
+  if (text && e.type !== 'image') {
+    const tc = ph ? '#9a9a9a' : (hov && e.hoverTextColor ? e.hoverTextColor : (v.textColor ?? e.textColor));
+    const pad = e.type === 'text' ? 0 : 6;
+    const l = h('div', {class: 'lbl'}, h('span', {html: mmToHtml(resolve(text, opts.vars || PV_VARS))}));
+    if (doc().type === 'hud' || (PV && PV.d.type === 'hud')) l.style.whiteSpace = 'pre';
+    Object.assign(l.style, {color: tc, fontSize: (9 * e.textSize) + 'px', lineHeight: (10 * e.textSize) + 'px',
+      justifyContent: e.align === 'left' ? 'flex-start' : e.align === 'right' ? 'flex-end' : 'center',
+      textAlign: e.align, padding: `0 ${pad}px`, textShadow: e.shadow ? `${e.textSize}px ${e.textSize}px 0 rgba(0,0,0,.55)` : 'none'});
+    d.append(l);
+  }
+  return d;
+}
+function headSvg() {
+  return `<svg viewBox="0 0 8 8" style="width:100%;height:100%;image-rendering:pixelated" shape-rendering="crispEdges">
+  <rect width="8" height="8" fill="#6b4a32"/><rect y="0" width="8" height="3" fill="#3b2a1e"/><rect y="3" width="8" height="5" fill="#c99f7c"/>
+  <rect x="1" y="4" width="2" height="1" fill="#fff"/><rect x="2" y="4" width="1" height="1" fill="#4b3bbf"/><rect x="5" y="4" width="2" height="1" fill="#fff"/><rect x="5" y="4" width="1" height="1" fill="#4b3bbf"/>
+  <rect x="3" y="6" width="2" height="1" fill="#8a5a44"/></svg>`;
+}
+function renderCanvas() {
+  const d = doc();
+  board.style.transform = `translate(${S.panX}px,${S.panY}px) scale(${S.zoom})`;
+  board.style.setProperty('--inv', 1 / S.zoom);
+  const art = h('div', {class: 'artboard', style: {width: d.canvas.width + 'px', height: d.canvas.height + 'px'}});
+  const lbl = h('div', {class: 'artboard-label', style: {transform: `scale(${1 / S.zoom})`, transformOrigin: '0 100%'}},
+    `${d.name} · ${d.type.toUpperCase()} · ${d.canvas.width}×${d.canvas.height}`);
+  art.append(lbl);
+  if (d.type === 'hud') art.append(h('div', {class: 'hudmid'}));
+  for (const e of d.elements) art.append(elNode(e, vals(e)));
+  // hover outline
+  if (S.hover && !S.sel.includes(S.hover)) {
+    const e = byId(S.hover);
+    if (e) art.append(boxFor(e, 'hoverbox'));
+  }
+  // selection
+  const sel = selected();
+  if (sel.length === 1) {
+    const e = sel[0], b = boxFor(e, 'sel');
+    if (!e.locked) {
+      for (const [hx, hy] of [[0, 0], [.5, 0], [1, 0], [0, .5], [1, .5], [0, 1], [.5, 1], [1, 1]]) {
+        b.append(h('div', {class: 'handle', 'data-h': hx + ',' + hy, style: {left: hx * 100 + '%', top: hy * 100 + '%', cursor: cursorFor(hx, hy, vals(e).rotation)}}));
+      }
+      b.append(h('div', {class: 'rotline'}));
+      b.append(h('div', {class: 'handle rot', 'data-h': 'rot', style: {left: '50%', top: `calc(-18px * var(--inv))`, cursor: 'grab'}}));
+    }
+    art.append(b);
+  } else if (sel.length > 1) {
+    for (const e of sel) art.append(boxFor(e, 'sel multi'));
+  }
+  for (const g of S.guides) {
+    art.append(h('div', {class: 'guide', style: g.v ? {left: g.p + 'px', top: '-2000px', width: `calc(1px * var(--inv))`, height: '6000px'} :
+        {top: g.p + 'px', left: '-2000px', height: `calc(1px * var(--inv))`, width: '6000px'}}));
+  }
+  if (S.marquee) {
+    const m = S.marquee;
+    art.append(h('div', {class: 'marquee', style: {left: Math.min(m.x0, m.x1) + 'px', top: Math.min(m.y0, m.y1) + 'px', width: Math.abs(m.x1 - m.x0) + 'px', height: Math.abs(m.y1 - m.y0) + 'px'}}));
+  }
+  board.replaceChildren(art);
+  $('#zoomLbl').textContent = Math.round(S.zoom * 100) + '%';
+}
+function boxFor(e, cls) {
+  const v = vals(e);
+  return h('div', {class: cls, style: {left: v.x + 'px', top: v.y + 'px', width: v.w + 'px', height: v.h + 'px', transformOrigin: anchorOrigin(e.anchor),
+    transform: `rotate(${v.rotation}deg) scale(${v.scale})`}});
+}
+function cursorFor(hx, hy, rot) {
+  if (hx === .5 && hy === .5) return 'move';
+  let ang = Math.atan2(hy - .5, hx - .5) * 180 / Math.PI + (rot || 0);
+  ang = ((ang % 180) + 180) % 180;
+  return ang < 22.5 || ang >= 157.5 ? 'ew-resize' : ang < 67.5 ? 'nwse-resize' : ang < 112.5 ? 'ns-resize' : 'nesw-resize';
+}
+function toCanvas(ev) {
+  const r = stage.getBoundingClientRect();
+  return {x: (ev.clientX - r.left - S.panX) / S.zoom, y: (ev.clientY - r.top - S.panY) / S.zoom};
+}
+function hitTest(p) {
+  const list = doc().elements;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const e = list[i];
+    if (e.locked) continue;
+    const v = vals(e);
+    if (!v.visible && !S.showHidden) { /* hidden elements are still selectable via outline */ }
+    const pv = pivotOf(v, e.anchor), sc = v.scale || 1;
+    let dx = p.x - pv[0], dy = p.y - pv[1];
+    if (v.rotation) { const r = -v.rotation * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); [dx, dy] = [dx * c - dy * s, dx * s + dy * c]; }
+    const lx = pv[0] + dx / sc, ly = pv[1] + dy / sc;
+    if (lx >= v.x && lx <= v.x + v.w && ly >= v.y && ly <= v.y + v.h) return e;
+  }
+  return null;
+}
+function pivotOf(v, a = 'center') {
+  let px = v.x + v.w / 2, py = v.y + v.h / 2;
+  if (a.includes('left')) px = v.x; if (a.includes('right')) px = v.x + v.w;
+  if (a.startsWith('top')) py = v.y; if (a.startsWith('bottom')) py = v.y + v.h;
+  return [px, py];
+}
+function fit() {
+  const r = stage.getBoundingClientRect(), d = doc();
+  const z = Math.min((r.width - 80) / d.canvas.width, (r.height - 80) / d.canvas.height);
+  S.zoom = clamp(z, .1, 8);
+  S.panX = (r.width - d.canvas.width * S.zoom) / 2;
+  S.panY = (r.height - d.canvas.height * S.zoom) / 2;
+  renderCanvas();
+}
+function zoomAt(f, cx, cy) {
+  const nz = clamp(S.zoom * f, .1, 12);
+  const r = stage.getBoundingClientRect();
+  if (cx == null) { cx = r.width / 2; cy = r.height / 2; }
+  S.panX = cx - (cx - S.panX) * (nz / S.zoom);
+  S.panY = cy - (cy - S.panY) * (nz / S.zoom);
+  S.zoom = nz;
+  renderCanvas();
+}
+
+/* ============================================================== canvas interaction */
+let drag = null;
+stage.addEventListener('wheel', ev => {
+  ev.preventDefault();
+  const r = stage.getBoundingClientRect();
+  if (ev.ctrlKey || ev.metaKey) zoomAt(Math.exp(-ev.deltaY * 0.0022), ev.clientX - r.left, ev.clientY - r.top);
+  else { S.panX -= ev.deltaX; S.panY -= ev.deltaY; renderCanvas(); }
+}, {passive: false});
+stage.addEventListener('pointermove', ev => {
+  if (drag) return;
+  const e = hitTest(toCanvas(ev));
+  const id = e ? e.id : null;
+  if (id !== S.hover) { S.hover = id; renderCanvas(); }
+});
+stage.addEventListener('pointerleave', () => { if (S.hover) { S.hover = null; renderCanvas(); } });
+stage.addEventListener('pointerdown', ev => {
+  if (ev.button === 1 || (ev.button === 0 && S.spaceDown)) {
+    drag = {kind: 'pan', sx: ev.clientX, sy: ev.clientY, px: S.panX, py: S.panY};
+    stage.classList.add('panning');
+    stage.setPointerCapture(ev.pointerId);
+    return;
+  }
+  if (ev.button !== 0) return;
+  const p = toCanvas(ev);
+  const handle = ev.target.closest('.handle');
+  stage.setPointerCapture(ev.pointerId);
+  if (handle && selected().length === 1) {
+    const e = selected()[0];
+    const kind = handle.dataset.h === 'rot' ? 'rotate' : 'resize';
+    const [hx, hy] = kind === 'resize' ? handle.dataset.h.split(',').map(Number) : [0, 0];
+    drag = {kind, e, hx, hy, start: p, orig: {...vals(e)}, snap: snapshot()};
+    return;
+  }
+  if (S.tool !== 'select' && TYPES.includes(S.tool)) {
+    drag = {kind: 'create', type: S.tool, start: p, cur: p};
+    return;
+  }
+  const e = hitTest(p);
+  if (e) {
+    if (ev.shiftKey) S.sel = S.sel.includes(e.id) ? S.sel.filter(i => i !== e.id) : [...S.sel, e.id];
+    else if (!S.sel.includes(e.id)) S.sel = [e.id];
+    if (ev.altKey) { // alt-drag duplicates
+      pushUndo();
+      const copies = selected().map(o => Object.assign(clone(o), {id: rid(), name: o.name + ' copy'}));
+      doc().elements.push(...copies);
+      S.sel = copies.map(c => c.id);
+      drag = {kind: 'move', start: p, origs: selected().map(o => ({e: o, ...vals(o)})), snap: null};
+    } else {
+      drag = {kind: 'move', start: p, origs: selected().map(o => ({e: o, ...vals(o)})), snap: snapshot()};
+    }
+    render();
+  } else {
+    if (!ev.shiftKey) S.sel = [];
+    S.marquee = {x0: p.x, y0: p.y, x1: p.x, y1: p.y};
+    drag = {kind: 'marquee'};
+    render();
+  }
+});
+stage.addEventListener('pointermove', ev => {
+  if (!drag) return;
+  if (drag.kind === 'pan') {
+    S.panX = drag.px + ev.clientX - drag.sx; S.panY = drag.py + ev.clientY - drag.sy;
+    renderCanvas(); return;
+  }
+  const p = toCanvas(ev);
+  if (drag.kind === 'marquee') {
+    S.marquee.x1 = p.x; S.marquee.y1 = p.y;
+    const m = S.marquee, x0 = Math.min(m.x0, m.x1), x1 = Math.max(m.x0, m.x1), y0 = Math.min(m.y0, m.y1), y1 = Math.max(m.y0, m.y1);
+    S.sel = els().filter(e => !e.locked && e.x < x1 && e.x + e.w > x0 && e.y < y1 && e.y + e.h > y0).map(e => e.id);
+    renderCanvas(); return;
+  }
+  if (drag.kind === 'create') { drag.cur = p; S.marquee = {x0: drag.start.x, y0: drag.start.y, x1: p.x, y1: p.y}; renderCanvas(); return; }
+  if (drag.kind === 'move') {
+    let dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+    if (ev.shiftKey) { if (Math.abs(dx) > Math.abs(dy)) dy = 0; else dx = 0; }
+    const bb = bbox(drag.origs.map(o => ({x: o.x + dx, y: o.y + dy, w: o.w, h: o.h})));
+    const sn = snapBox(bb, drag.origs.map(o => o.e.id));
+    dx += sn.dx; dy += sn.dy; S.guides = sn.guides;
+    for (const o of drag.origs) { setProp(o.e, 'x', Math.round(o.x + dx)); setProp(o.e, 'y', Math.round(o.y + dy)); }
+    renderCanvas(); renderPanelLive(); return;
+  }
+  if (drag.kind === 'resize') {
+    const o = drag.orig, e = drag.e;
+    let dx = p.x - drag.start.x, dy = p.y - drag.start.y;
+    if (o.rotation) { const r = -o.rotation * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); [dx, dy] = [dx * c - dy * s, dx * s + dy * c]; }
+    dx /= o.scale || 1; dy /= o.scale || 1;
+    let x = o.x, y = o.y, w = o.w, hh = o.h;
+    if (drag.hx === 0) { x = o.x + dx; w = o.w - dx; } else if (drag.hx === 1) w = o.w + dx;
+    if (drag.hy === 0) { y = o.y + dy; hh = o.h - dy; } else if (drag.hy === 1) hh = o.h + dy;
+    if (ev.shiftKey && drag.hx !== .5 && drag.hy !== .5) { // keep ratio
+      const ratio = o.w / o.h;
+      if (Math.abs(w / o.w) > Math.abs(hh / o.h)) { const nh = w / ratio; if (drag.hy === 0) y -= nh - hh; hh = nh; }
+      else { const nw = hh * ratio; if (drag.hx === 0) x -= nw - w; w = nw; }
+    }
+    if (w < 1) { w = 1; } if (hh < 1) { hh = 1; }
+    setProp(e, 'x', Math.round(x)); setProp(e, 'y', Math.round(y)); setProp(e, 'w', Math.round(w)); setProp(e, 'h', Math.round(hh));
+    renderCanvas(); renderPanelLive(); return;
+  }
+  if (drag.kind === 'rotate') {
+    const o = drag.orig, pv = pivotOf(o, drag.e.anchor);
+    let ang = Math.atan2(p.y - pv[1], p.x - pv[0]) * 180 / Math.PI + 90;
+    if (ev.shiftKey) ang = Math.round(ang / 15) * 15;
+    ang = Math.round(((ang + 540) % 360) - 180);
+    setProp(drag.e, 'rotation', ang);
+    renderCanvas(); renderPanelLive();
+  }
+});
+const endDrag = ev => {
+  if (!drag) return;
+  const d = drag; drag = null;
+  stage.classList.remove('panning');
+  S.guides = [];
+  if (d.kind === 'create') {
+    const a = d.start, b = d.cur || d.start;
+    const def = defaultsFor(d.type);
+    let x = Math.round(Math.min(a.x, b.x)), y = Math.round(Math.min(a.y, b.y)), w = Math.round(Math.abs(b.x - a.x)), hh = Math.round(Math.abs(b.y - a.y));
+    if (w < 4 || hh < 4) { w = def.w; hh = def.h; x = Math.round(a.x - w / 2); y = Math.round(a.y - hh / 2); }
+    S.marquee = null;
+    addElement(d.type, {x, y, w, h: hh});
+    if (!ev.shiftKey) setTool('select');
+    return;
+  }
+  if (d.kind === 'marquee') { S.marquee = null; render(); return; }
+  if ((d.kind === 'move' || d.kind === 'resize' || d.kind === 'rotate')) {
+    const changed = snapshot() !== d.snap;
+    if (d.snap && changed) pushUndo(d.snap);
+    afterChange();
+  }
+  renderCanvas();
+};
+stage.addEventListener('pointerup', endDrag);
+stage.addEventListener('pointercancel', endDrag);
+stage.addEventListener('dblclick', ev => {
+  const e = hitTest(toCanvas(ev));
+  if (e && e.type !== 'image' && e.type !== 'item' && e.type !== 'head' && e.type !== 'rect') {
+    S.sel = [e.id]; S.side = 'design'; render();
+    setTimeout(() => { const t = $('#f_text'); if (t) { t.focus(); t.select(); } }, 0);
+  }
+});
+function bbox(list) {
+  const x0 = Math.min(...list.map(b => b.x)), y0 = Math.min(...list.map(b => b.y));
+  const x1 = Math.max(...list.map(b => b.x + b.w)), y1 = Math.max(...list.map(b => b.y + b.h));
+  return {x: x0, y: y0, w: x1 - x0, h: y1 - y0};
+}
+function snapBox(bb, ignore) {
+  const d = doc(), th = 5 / S.zoom;
+  const xs = [0, d.canvas.width / 2, d.canvas.width], ys = [0, d.canvas.height / 2, d.canvas.height];
+  for (const e of d.elements) if (!ignore.includes(e.id) && e.visible) { const v = vals(e); xs.push(v.x, v.x + v.w / 2, v.x + v.w); ys.push(v.y, v.y + v.h / 2, v.y + v.h); }
+  let best = {dx: 0, gx: null, ax: th + 1}, bestY = {dy: 0, gy: null, ay: th + 1};
+  for (const cand of [bb.x, bb.x + bb.w / 2, bb.x + bb.w]) for (const t of xs) { const a = Math.abs(t - cand); if (a < best.ax) best = {dx: t - cand, gx: t, ax: a}; }
+  for (const cand of [bb.y, bb.y + bb.h / 2, bb.y + bb.h]) for (const t of ys) { const a = Math.abs(t - cand); if (a < bestY.ay) bestY = {dy: t - cand, gy: t, ay: a}; }
+  const guides = [];
+  if (best.gx != null) guides.push({v: true, p: best.gx});
+  if (bestY.gy != null) guides.push({v: false, p: bestY.gy});
+  return {dx: best.gx != null ? best.dx : 0, dy: bestY.gy != null ? bestY.dy : 0, guides};
+}
+function addElement(type, props = {}) {
+  const e = Object.assign(defaultsFor(type), {id: rid()}, props);
+  const count = els().filter(x => x.type === type).length + 1;
+  e.name = defaultsFor(type).name + (count > 1 ? ' ' + count : '');
+  if (type === 'image' && !e.sprite && doc().sprites.length) e.sprite = doc().sprites[0].id;
+  mutate(d => d.elements.push(e));
+  S.sel = [e.id];
+  render();
+  return e;
+}
+/* ============================================================== inspector panel */
+const panel = $('#panel');
+function field(label, input) { return h('div', {class: 'row'}, h('label', {}, label), input); }
+/** Numeric field with drag-to-scrub label. */
+function numInput(label, get, set, opts = {}) {
+  const wrap = h('div', {class: 'num' + (opts.keyed ? ' keyed' : '')});
+  const b = h('b', {title: 'Drag to change'}, label);
+  const inp = h('input', {type: 'text', inputmode: 'decimal', value: round(get(), 2), id: opts.id});
+  const commit = v => { const n = Number(v); if (!Number.isFinite(n)) return; mutate(() => set(opts.min != null ? Math.max(opts.min, n) : n)); };
+  inp.addEventListener('change', () => commit(inp.value));
+  inp.addEventListener('keydown', ev => {
+    if (ev.key === 'ArrowUp' || ev.key === 'ArrowDown') {
+      ev.preventDefault();
+      const step = (opts.step || 1) * (ev.shiftKey ? 10 : 1) * (ev.key === 'ArrowUp' ? 1 : -1);
+      commit(round(Number(inp.value) + step, 3));
+    }
+  });
+  b.addEventListener('pointerdown', ev => {
+    const sx = ev.clientX, start = Number(get()) || 0, snap = snapshot();
+    b.setPointerCapture(ev.pointerId);
+    const mv = e2 => { const n = round(start + (e2.clientX - sx) * (opts.step || 1), 3); set(opts.min != null ? Math.max(opts.min, n) : n); inp.value = round(get(), 2); renderCanvas(); };
+    const up = () => { b.removeEventListener('pointermove', mv); b.removeEventListener('pointerup', up); if (snapshot() !== snap) pushUndo(snap); afterChange(); };
+    b.addEventListener('pointermove', mv); b.addEventListener('pointerup', up);
+  });
+  wrap.append(b, inp);
+  return wrap;
+}
+function textInput(get, set, opts = {}) {
+  const tag = opts.area ? 'textarea' : 'input';
+  const i = h(tag, {class: 'inp', value: get() ?? '', placeholder: opts.ph || '', id: opts.id, spellcheck: 'false'});
+  if (opts.area) i.value = get() ?? '';
+  i.addEventListener('change', () => mutate(() => set(i.value)));
+  if (opts.live) i.addEventListener('input', () => { set(i.value); renderCanvas(); });
+  return i;
+}
+function colorInput(get, set, allowEmpty = false) {
+  const val = get() || '';
+  const c = h('input', {type: 'color', value: /^#[0-9a-f]{6}$/i.test(val) ? val : '#ffffff'});
+  const t = h('input', {class: 'inp', value: val, placeholder: allowEmpty ? 'none' : '#ffffff', spellcheck: 'false'});
+  c.addEventListener('input', () => { t.value = c.value; set(c.value); renderCanvas(); });
+  c.addEventListener('change', () => { pushUndo(); set(c.value); afterChange(); });
+  t.addEventListener('change', () => mutate(() => set(t.value.trim())));
+  return h('div', {class: 'color'}, c, t);
+}
+function checkInput(label, get, set) {
+  const i = h('input', {type: 'checkbox'}); i.checked = !!get();
+  i.addEventListener('change', () => mutate(() => set(i.checked)));
+  return h('label', {class: 'check'}, i, label);
+}
+function selectInput(opts, get, set, id) {
+  const s = h('select', {class: 'inp', id});
+  for (const o of opts) { const [v, l] = Array.isArray(o) ? o : [o, o]; const op = h('option', {value: v}, l); if (String(get()) === String(v)) op.selected = true; s.append(op); }
+  s.addEventListener('change', () => mutate(() => set(s.value)));
+  return s;
+}
+function spriteSelect(get, set, id) {
+  return selectInput([['', '— none —'], ...doc().sprites.map(s => [s.id, `${s.id} (${s.width}×${s.height})`])], get, set, id);
+}
+function seg(opts, get, set) {
+  const s = h('div', {class: 'seg'});
+  for (const [v, l] of opts) s.append(h('button', {class: get() === v ? 'on' : '', onclick: () => mutate(() => set(v))}, l));
+  return s;
+}
+function sec(title, ...kids) { return h('div', {class: 'sec'}, h('h4', {}, title), ...kids); }
+
+function renderPanel() {
+  $$('#sidetabs button').forEach(b => b.classList.toggle('on', b.dataset.t === S.side));
+  const sel = selected();
+  let content;
+  if (S.side === 'layers') content = layersPanel();
+  else if (!sel.length) content = docPanel();
+  else if (sel.length > 1) content = multiPanel(sel);
+  else content = S.side === 'design' ? designPanel(sel[0]) : propsPanel(sel[0]);
+  const scroll = panel.scrollTop;
+  panel.replaceChildren(content);
+  panel.scrollTop = scroll;
+}
+/** Cheap refresh of numeric fields during drags. */
+function renderPanelLive() {
+  const e = selected()[0];
+  if (!e || S.side !== 'props') return;
+  const v = vals(e);
+  for (const k of ['x', 'y', 'w', 'h', 'rotation', 'scale', 'opacity']) { const i = $('#p_' + k); if (i && document.activeElement !== i) i.value = round(v[k], 2); }
+}
+function propsPanel(e) {
+  const v = vals(e);
+  const N = (k, l, o = {}) => numInput(l, () => vals(e)[k], n => setProp(e, k, n), {id: 'p_' + k, keyed: isKeyed(e, k), ...o});
+  const anchorGrid = h('div', {class: 'anchor'});
+  for (const a of ['top-left', 'top', 'top-right', 'left', 'center', 'right', 'bottom-left', 'bottom', 'bottom-right']) {
+    anchorGrid.append(h('button', {class: e.anchor === a ? 'on' : '', title: a, onclick: () => mutate(() => e.anchor = a)}));
+  }
+  return h('div', {},
+    sec('Layout',
+      h('div', {class: 'row2'}, N('x', 'X'), N('y', 'Y')),
+      h('div', {class: 'row2'}, N('w', 'W', {min: 1}), N('h', 'H', {min: 1})),
+      h('div', {class: 'row2'}, N('rotation', '↻'), N('scale', 'S', {step: .01, min: 0})),
+      h('div', {class: 'row2'}, N('opacity', 'α', {step: .01, min: 0}), h('div'))),
+    sec('General',
+      field('Name', textInput(() => e.name, x => e.name = x)),
+      field('Type', h('div', {class: 'inp', style: {opacity: .7}}, e.type)),
+      field('ID', textInput(() => e.id, x => renameId(e, x)))),
+    sec('Behavior',
+      checkInput('Visible', () => e.visible, x => e.visible = x),
+      checkInput('Blocked (ignores the cursor)', () => e.blocked, x => e.blocked = x),
+      checkInput('Locked in editor', () => e.locked, x => e.locked = x)),
+    sec('Anchor', h('div', {style: {display: 'flex', gap: '14px', alignItems: 'center'}}, anchorGrid,
+      h('p', {style: {margin: 0, color: 'var(--faint)', fontSize: '12px'}}, 'Pivot for rotation and scale. ', h('br'), 'Now: ', e.anchor))),
+    sec('Arrange', h('div', {style: {display: 'flex', gap: '6px', flexWrap: 'wrap'}},
+      h('button', {class: 'btn sm', onclick: () => arrange('top')}, 'To front'),
+      h('button', {class: 'btn sm', onclick: () => arrange('up')}, 'Forward'),
+      h('button', {class: 'btn sm', onclick: () => arrange('down')}, 'Backward'),
+      h('button', {class: 'btn sm', onclick: () => arrange('bottom')}, 'To back'),
+      h('button', {class: 'btn sm', onclick: () => alignSel('cx')}, 'Centre X'),
+      h('button', {class: 'btn sm', onclick: () => alignSel('cy')}, 'Centre Y'),
+      h('button', {class: 'btn sm', onclick: duplicate}, 'Duplicate'),
+      h('button', {class: 'btn sm danger', onclick: removeSel}, 'Delete')))
+  );
+}
+function renameId(e, raw) {
+  const id = slug(raw);
+  if (!id || id === e.id) return;
+  if (byId(id)) return toast('That ID is already used', 'err');
+  const old = e.id;
+  e.id = id;
+  for (const a of doc().animations) for (const t of a.tracks) if (t.element === old) t.element = id;
+  for (const n of doc().script.nodes) if (n.props.element === old) n.props.element = id;
+  S.sel = S.sel.map(s => s === old ? id : s);
+}
+function designPanel(e) {
+  const parts = [];
+  const hasText = !['image', 'item', 'head', 'progress'].includes(e.type);
+  parts.push(sec('Fill',
+    checkInput('Fill colour', () => e.fillEnabled, x => e.fillEnabled = x),
+    field('Colour', colorInput(() => e.fill, x => e.fill = x)),
+    field('Sprite', spriteSelect(() => e.sprite, x => e.sprite = x, 'f_sprite')),
+    h('p', {style: {margin: '2px 0 0', color: 'var(--faint)', fontSize: '11.5px'}}, 'A sprite replaces the colour. Make rounded panels in Sprites → Generate.')));
+  if (hasText) parts.push(sec('Text',
+    field('Text', textInput(() => e.text, x => e.text = x, {area: true, id: 'f_text', ph: 'Supports <#ff8fd1>colours</#ff8fd1>, <bold>, {player}, %papi%'})),
+    field('Colour', colorInput(() => e.textColor, x => e.textColor = x)),
+    h('div', {class: 'row2'}, numInput('Size', () => e.textSize, x => e.textSize = x, {step: .05, min: .1}), h('div')),
+    field('Align', seg([['left', 'Left'], ['center', 'Centre'], ['right', 'Right']], () => e.align, x => e.align = x)),
+    checkInput('Text shadow', () => e.shadow, x => e.shadow = x),
+    e.type === 'input' ? field('Placeholder', textInput(() => e.placeholder, x => e.placeholder = x)) : null));
+  if (e.type === 'progress') parts.push(sec('Progress',
+    field('Value', textInput(() => e.value, x => e.value = x, {ph: '{var:xp} or %papi%'})),
+    field('Max', textInput(() => e.max, x => e.max = x)),
+    field('Bar colour', colorInput(() => e.barColor, x => e.barColor = x)),
+    field('Bar sprite', spriteSelect(() => e.barSprite, x => e.barSprite = x))));
+  if (e.type === 'item') parts.push(sec('Item',
+    field('Item id', textInput(() => e.item, x => e.item = x, {ph: 'minecraft:diamond_sword'}))));
+  if (e.type === 'head') parts.push(sec('Head',
+    field('Owner', textInput(() => e.headOwner, x => e.headOwner = x, {ph: 'blank = the viewer'}))));
+  parts.push(sec('Hover',
+    field('Fill', colorInput(() => e.hoverFill, x => e.hoverFill = x, true)),
+    field('Sprite', spriteSelect(() => e.hoverSprite, x => e.hoverSprite = x)),
+    hasText ? field('Text', colorInput(() => e.hoverTextColor, x => e.hoverTextColor = x, true)) : null,
+    h('div', {class: 'row2'}, numInput('Scale', () => e.hoverScale, x => e.hoverScale = x, {step: .01, min: .1}), h('div')),
+    doc().type === 'hud' ? h('p', {style: {margin: 0, color: 'var(--warn)', fontSize: '11.5px'}}, 'HUDs have no cursor, hover settings are ignored.') : null));
+  return h('div', {}, ...parts);
+}
+function multiPanel(list) {
+  return h('div', {},
+    sec(list.length + ' elements selected',
+      h('div', {style: {display: 'flex', gap: '6px', flexWrap: 'wrap'}},
+        ...[['left', 'Left'], ['cx', 'Centre X'], ['right', 'Right'], ['top', 'Top'], ['cy', 'Centre Y'], ['bottom', 'Bottom']].map(([k, l]) =>
+          h('button', {class: 'btn sm', onclick: () => alignSel(k)}, l)),
+        h('button', {class: 'btn sm', onclick: () => distribute('x')}, 'Space evenly ↔'),
+        h('button', {class: 'btn sm', onclick: () => distribute('y')}, 'Space evenly ↕'),
+        h('button', {class: 'btn sm', onclick: duplicate}, 'Duplicate'),
+        h('button', {class: 'btn sm danger', onclick: removeSel}, 'Delete'))),
+    sec('Batch',
+      checkInput('Visible', () => list.every(e => e.visible), x => list.forEach(e => e.visible = x)),
+      checkInput('Blocked', () => list.every(e => e.blocked), x => list.forEach(e => e.blocked = x)),
+      field('Fill', colorInput(() => list[0].fill, x => list.forEach(e => e.fill = x)))));
+}
+function docPanel() {
+  const d = doc(), st = d.settings;
+  const typeHelp = {screen: 'Opens in front of the player. They aim with the crosshair and click.', hud: 'Always on screen while playing. X is measured from the screen centre, Y from the top.', world: 'Placed in the world with /sui world place. Anyone can look at it and click.'};
+  return h('div', {},
+    sec('UI',
+      field('Name', textInput(() => d.name, x => d.name = x)),
+      field('ID', textInput(() => d.id, x => d.id = slug(x) || d.id)),
+      field('Type', seg([['screen', 'Screen'], ['hud', 'HUD'], ['world', 'World']], () => d.type, x => d.type = x)),
+      h('p', {style: {margin: '0', color: 'var(--faint)', fontSize: '12px'}}, typeHelp[d.type])),
+    sec('Canvas',
+      h('div', {class: 'row2'},
+        numInput('W', () => d.canvas.width, x => d.canvas.width = Math.round(clamp(x, 16, 2048)), {min: 16}),
+        numInput('H', () => d.canvas.height, x => d.canvas.height = Math.round(clamp(x, 16, 2048)), {min: 16})),
+      h('div', {style: {display: 'flex', gap: '6px', flexWrap: 'wrap'}},
+        ...[[480, 270], [400, 240], [320, 180], [256, 256]].map(([w, hh]) => h('button', {class: 'btn sm', onclick: () => mutate(() => { d.canvas.width = w; d.canvas.height = hh; })}, w + '×' + hh)))),
+    sec('Opening',
+      field('Command', textInput(() => st.command, x => st.command = x.replace(/^\//, ''), {ph: 'menu (opens this UI)'})),
+      field('Permission', textInput(() => st.permission, x => st.permission = x, {ph: 'optional'}))),
+    d.type === 'screen' ? sec('Screen',
+      checkInput('Freeze movement while open', () => st.freeze, x => st.freeze = x),
+      checkInput('Sneak (Shift) closes it', () => st.closeOnSneak, x => st.closeOnSneak = x),
+      checkInput('Keep cursor inside the canvas', () => st.clampCursor, x => st.clampCursor = x),
+      h('div', {class: 'row2'}, numInput('Dim', () => st.dim, x => st.dim = clamp(x, 0, 1), {step: .01, min: 0}), numInput('Size', () => st.screenSize, x => st.screenSize = clamp(x, .1, 2.5), {step: .01, min: .1})),
+      field('Cursor', spriteSelect(() => st.cursorSprite, x => st.cursorSprite = x))) : null,
+    d.type === 'hud' ? sec('HUD',
+      checkInput('Show automatically on join', () => st.autoShow, x => st.autoShow = x),
+      h('p', {style: {margin: 0, color: 'var(--faint)', fontSize: '12px'}}, 'HUD text supports plain ASCII. Item and head elements are not available on HUDs.')) : null,
+    d.type === 'world' ? sec('World',
+      h('div', {class: 'row2'}, numInput('Scale', () => st.worldScale, x => st.worldScale = clamp(x, .05, 20), {step: .01, min: .05}), h('div')),
+      h('p', {style: {margin: 0, color: 'var(--faint)', fontSize: '12px'}}, 'Blocks per 100 pixels. ' + round(d.canvas.width * st.worldScale / 100, 2) + ' × ' + round(d.canvas.height * st.worldScale / 100, 2) + ' blocks.')) : null,
+    sec('Stats', h('p', {style: {margin: 0, color: 'var(--muted)'}},
+      `${d.elements.length} elements · ${d.sprites.length} sprites · ${d.animations.length} animations · ${d.script.nodes.length} script nodes`))
+  );
+}
+function layersPanel() {
+  const list = h('ul', {class: 'layers'});
+  const items = [...doc().elements].reverse();
+  if (!items.length) return h('div', {class: 'empty'}, 'No layers yet. Pick a tool on the left and drag on the canvas.');
+  let dragId = null;
+  for (const e of items) {
+    const li = h('li', {class: 'layer' + (S.sel.includes(e.id) ? ' on' : ''), draggable: 'true', 'data-id': e.id},
+      h('button', {class: 'mini' + (e.visible ? '' : ' off'), title: e.visible ? 'Hide' : 'Show', html: svg(e.visible ? 'eye' : 'eyeoff'),
+        onclick: ev => { ev.stopPropagation(); mutate(() => e.visible = !e.visible); }}),
+      h('span', {class: 'nm'}, e.name),
+      h('span', {class: 'ty'}, e.type),
+      h('button', {class: 'mini' + (e.locked ? ' off' : ''), title: e.locked ? 'Unlock' : 'Lock', html: svg(e.locked ? 'lock' : 'unlock'),
+        onclick: ev => { ev.stopPropagation(); mutate(() => e.locked = !e.locked); }}));
+    li.addEventListener('click', ev => {
+      if (ev.shiftKey) S.sel = S.sel.includes(e.id) ? S.sel.filter(i => i !== e.id) : [...S.sel, e.id];
+      else S.sel = [e.id];
+      render();
+    });
+    li.addEventListener('dblclick', () => {
+      const nm = li.querySelector('.nm');
+      const inp = h('input', {class: 'inp', value: e.name});
+      nm.replaceWith(inp); inp.focus(); inp.select();
+      const done = () => mutate(() => e.name = inp.value || e.name);
+      inp.addEventListener('blur', done); inp.addEventListener('keydown', k => { if (k.key === 'Enter') inp.blur(); });
+    });
+    li.addEventListener('dragstart', ev => { dragId = e.id; ev.dataTransfer.effectAllowed = 'move'; });
+    li.addEventListener('dragover', ev => {
+      ev.preventDefault();
+      const r = li.getBoundingClientRect(), above = ev.clientY < r.top + r.height / 2;
+      li.classList.toggle('drop-above', above); li.classList.toggle('drop-below', !above);
+    });
+    li.addEventListener('dragleave', () => li.classList.remove('drop-above', 'drop-below'));
+    li.addEventListener('drop', ev => {
+      ev.preventDefault();
+      const r = li.getBoundingClientRect(), above = ev.clientY < r.top + r.height / 2;
+      if (!dragId || dragId === e.id) return render();
+      mutate(d => {
+        const moving = d.elements.find(x => x.id === dragId);
+        d.elements = d.elements.filter(x => x.id !== dragId);
+        const idx = d.elements.findIndex(x => x.id === e.id);
+        // list is reversed: "above" in the list = higher layer = after in array
+        d.elements.splice(above ? idx + 1 : idx, 0, moving);
+      });
+    });
+    list.append(li);
+  }
+  return h('div', {}, h('div', {class: 'sec'}, h('h4', {}, 'Layers', h('span', {style: {textTransform: 'none', letterSpacing: 0}}, items.length + ' total'))), list);
+}
+
+/* ============================================================== edit operations */
+function removeSel() {
+  if (!S.sel.length) return;
+  const ids = new Set(S.sel);
+  mutate(d => {
+    d.elements = d.elements.filter(e => !ids.has(e.id));
+    for (const a of d.animations) a.tracks = a.tracks.filter(t => !ids.has(t.element));
+  });
+  S.sel = [];
+  render();
+}
+function duplicate() {
+  const src = selected();
+  if (!src.length) return;
+  const copies = src.map(e => Object.assign(clone(e), {id: rid(), name: e.name + ' copy', x: e.x + 8, y: e.y + 8}));
+  mutate(d => d.elements.push(...copies));
+  S.sel = copies.map(c => c.id);
+  render();
+}
+function arrange(where) {
+  const ids = S.sel;
+  if (!ids.length) return;
+  mutate(d => {
+    const list = d.elements;
+    if (where === 'top' || where === 'bottom') {
+      const moving = list.filter(e => ids.includes(e.id)), rest = list.filter(e => !ids.includes(e.id));
+      d.elements = where === 'top' ? [...rest, ...moving] : [...moving, ...rest];
+    } else {
+      const dir = where === 'up' ? 1 : -1;
+      const order = dir > 0 ? [...list.keys()].reverse() : [...list.keys()];
+      for (const i of order) {
+        const j = i + dir;
+        if (ids.includes(list[i].id) && j >= 0 && j < list.length && !ids.includes(list[j].id)) [list[i], list[j]] = [list[j], list[i]];
+      }
+    }
+  });
+}
+function alignSel(mode) {
+  const list = selected();
+  if (!list.length) return;
+  const d = doc();
+  const ref = list.length === 1 ? {x: 0, y: 0, w: d.canvas.width, h: d.canvas.height} : bbox(list);
+  mutate(() => {
+    for (const e of list) {
+      if (mode === 'left') e.x = ref.x;
+      if (mode === 'right') e.x = ref.x + ref.w - e.w;
+      if (mode === 'cx') e.x = Math.round(ref.x + ref.w / 2 - e.w / 2);
+      if (mode === 'top') e.y = ref.y;
+      if (mode === 'bottom') e.y = ref.y + ref.h - e.h;
+      if (mode === 'cy') e.y = Math.round(ref.y + ref.h / 2 - e.h / 2);
+    }
+  });
+}
+function distribute(axis) {
+  const list = selected().sort((a, b) => a[axis] - b[axis]);
+  if (list.length < 3) return toast('Select at least 3 elements');
+  const size = axis === 'x' ? 'w' : 'h';
+  const first = list[0], last = list[list.length - 1];
+  const total = list.reduce((s, e) => s + e[size], 0);
+  const gap = (last[axis] + last[size] - first[axis] - total) / (list.length - 1);
+  mutate(() => { let p = first[axis]; for (const e of list) { e[axis] = Math.round(p); p += e[size] + gap; } });
+}
+function nudge(dx, dy) {
+  const list = selected().filter(e => !e.locked);
+  if (!list.length) return;
+  mutate(() => list.forEach(e => { setProp(e, 'x', vals(e).x + dx); setProp(e, 'y', vals(e).y + dy); }));
+}
+function copySel() { S.clip = clone(selected()); if (S.clip.length) toast('Copied ' + S.clip.length); }
+function paste() {
+  if (!S.clip || !S.clip.length) return;
+  const copies = S.clip.map(e => Object.assign(clone(e), {id: byId(e.id) ? rid() : e.id, x: e.x + 10, y: e.y + 10}));
+  mutate(d => d.elements.push(...copies));
+  S.clip = clone(copies);
+  S.sel = copies.map(c => c.id);
+  render();
+}
+
+/* ============================================================== rail, menus, tabs, status */
+const TOOLS = [['select', 'Select (V)', 'select'], ['rect', 'Rectangle (R)', 'rect'], ['text', 'Text (T)', 'text'], ['button', 'Button (B)', 'button'],
+  ['image', 'Image / sprite (I)', 'image'], ['input', 'Text input (N)', 'input'], ['progress', 'Progress bar (G)', 'progress'], ['item', 'Item (E)', 'item'], ['head', 'Player head (H)', 'head']];
+function setTool(t) { S.tool = t; renderRail(); stage.style.cursor = t === 'select' ? '' : 'crosshair'; }
+function renderRail() {
+  const r = $('#rail');
+  r.replaceChildren(
+    ...TOOLS.map(([id, title, icon]) => h('button', {class: 'icon-btn' + (S.tool === id ? ' on' : ''), title, html: svg(icon), onclick: () => setTool(id)})),
+    h('div', {class: 'sep'}),
+    h('button', {class: 'icon-btn', title: 'Sprites', html: svg('sprites'), onclick: openSprites}),
+    h('button', {class: 'icon-btn' + (S.dock ? ' on' : ''), title: 'Animation timeline (A)', html: svg('timeline'), onclick: toggleDock}),
+    h('button', {class: 'icon-btn' + (S.scriptOpen ? ' on' : ''), title: 'Scripts (K)', html: svg('script'), onclick: toggleScript}),
+    h('div', {class: 'grow'}),
+    h('button', {class: 'icon-btn', title: 'Code (JSON)', html: svg('code'), onclick: openCode}));
+}
+const MENUS = {
+  File: [['New screen UI', () => newTab('screen')], ['New HUD', () => newTab('hud')], ['New world UI', () => newTab('world')], '-',
+    ['Example: profile menu', () => openTab(tplMenu())], ['Example: HUD', () => openTab(tplHud())], ['Example: world board', () => openTab(tplBoard())], '-',
+    ['Open JSON…', () => $('#fileOpen').click(), 'Ctrl+O'], ['Load from server…', openPush], ['Export…', openExport, 'Ctrl+E'], ['Push to server…', openPush]],
+  Edit: [['Undo', undo, 'Ctrl+Z'], ['Redo', redo, 'Ctrl+Shift+Z'], '-', ['Copy', copySel, 'Ctrl+C'], ['Paste', paste, 'Ctrl+V'], ['Duplicate', duplicate, 'Ctrl+D'], ['Delete', removeSel, 'Del'], '-',
+    ['Select all', () => { S.sel = els().filter(e => !e.locked).map(e => e.id); render(); }, 'Ctrl+A']],
+  Layer: [['Bring to front', () => arrange('top'), ']'], ['Bring forward', () => arrange('up')], ['Send backward', () => arrange('down')], ['Send to back', () => arrange('bottom'), '['], '-',
+    ['Show / hide', () => mutate(() => selected().forEach(e => e.visible = !e.visible)), 'Ctrl+H'], ['Lock / unlock', () => mutate(() => selected().forEach(e => e.locked = !e.locked)), 'Ctrl+L']],
+  Window: [['Sprites', openSprites], ['Timeline', toggleDock, 'A'], ['Scripts', toggleScript, 'K'], ['Code (JSON)', openCode], '-', ['Preview', startPreview, 'P'], ['Fit canvas', fit, 'Shift+1'], ['Help', openHelp, '?']]
+};
+function renderMenus() {
+  const m = $('#menus');
+  m.replaceChildren(...Object.entries(MENUS).map(([name, items]) => {
+    const wrap = h('div', {class: 'menu'});
+    const btn = h('button', {onclick: ev => { ev.stopPropagation(); const open = wrap.classList.contains('open'); closeMenus(); if (!open) { wrap.classList.add('open'); wrap.append(drop); } }}, name);
+    const drop = h('div', {class: 'dropdown'}, ...items.map(it => it === '-' ? h('hr') :
+      h('button', {onclick: () => { closeMenus(); it[1](); }}, h('span', {}, it[0]), it[2] ? h('kbd', {}, it[2]) : '')));
+    wrap.append(btn);
+    return wrap;
+  }));
+}
+function closeMenus() { $$('.menu.open').forEach(m => { m.classList.remove('open'); m.querySelector('.dropdown')?.remove(); }); }
+document.addEventListener('click', closeMenus);
+function renderTabs() {
+  const t = $('#tabs');
+  t.replaceChildren(...S.docs.map((d, i) => h('div', {class: 'tab' + (i === S.cur ? ' active' : ''), onclick: () => switchTab(i)},
+    h('span', {class: 'typ'}, d.type), d.name || d.id,
+    h('button', {class: 'x', title: 'Close', onclick: ev => { ev.stopPropagation(); closeTab(i); }}, '×'))),
+    h('button', {class: 'icon-btn', title: 'New UI', onclick: () => newTab('screen')}, '+'));
+  $('#docname').value = doc().name;
+}
+function switchTab(i) { if (i === S.cur) return; S.cur = i; S.sel = []; S.undo = []; S.redo = []; S.anim.id = doc().animations[0]?.id || null; S.anim.t = 0; render(); fit(); }
+function openTab(d) { S.docs.push(normalize(d)); switchTab(S.docs.length - 1); saveLocal(); }
+function newTab(type) { openTab(newDoc(type, type === 'hud' ? 'New HUD' : type === 'world' ? 'New board' : 'New menu')); }
+function closeTab(i) {
+  if (S.docs.length === 1) { S.docs = [newDoc('screen', 'Untitled')]; S.cur = 0; }
+  else { S.docs.splice(i, 1); S.cur = clamp(S.cur >= i ? S.cur - 1 : S.cur, 0, S.docs.length - 1); }
+  S.sel = []; S.undo = []; S.redo = []; render(); fit(); saveLocal();
+}
+function renderStatus() {
+  const d = doc(), e = selected()[0];
+  const v = e ? vals(e) : null;
+  $('#status').replaceChildren(
+    h('span', {}, d.id + '.json'),
+    h('span', {}, v ? `${e.name}  x ${round(v.x)}  y ${round(v.y)}  ${round(v.w)}×${round(v.h)}` : `${d.elements.length} layers`),
+    h('span', {class: 'sp'}),
+    h('span', {}, S.tool === 'select' ? 'Select' : 'Draw ' + S.tool),
+    h('span', {}, Math.round(S.zoom * 100) + '%'));
+}
+$('#docname').addEventListener('change', ev => mutate(d => { d.name = ev.target.value || d.name; if (!d.id || d.id === 'ui') d.id = slug(d.name); }));
+$('#sidetabs').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) { S.side = b.dataset.t; renderPanel(); } });
+/* ============================================================== timeline */
+const dock = $('#dock');
+const PX_PER_TICK = 14;
+const PROP_LABEL = {x: 'Position X', y: 'Position Y', w: 'Width', h: 'Height', scale: 'Scale', rotation: 'Rotation', opacity: 'Opacity'};
+function toggleDock() {
+  S.dock = !S.dock;
+  if (S.dock && !curAnim() && doc().animations.length) S.anim.id = doc().animations[0].id;
+  if (!S.dock) stopPlay();
+  render();
+}
+function newAnimation() {
+  const a = {id: rid('an'), name: 'animation' + (doc().animations.length + 1), length: 20, loop: false, autoplay: false, tracks: []};
+  mutate(d => d.animations.push(a));
+  S.anim.id = a.id; S.anim.t = 0; S.anim.auto = true;
+  render();
+  toast('Auto-key is on: moving or resizing writes keyframes at the playhead.');
+}
+let playRaf = 0, playLast = 0;
+function togglePlay() { if (S.anim.playing) stopPlay(); else startPlay(); }
+function startPlay() {
+  const a = curAnim(); if (!a) return;
+  S.anim.playing = true; playLast = performance.now();
+  if (S.anim.t >= a.length) S.anim.t = 0;
+  const step = now => {
+    if (!S.anim.playing) return;
+    S.anim.t += (now - playLast) / 50; playLast = now;
+    if (S.anim.t >= a.length) { if (a.loop) S.anim.t %= a.length; else { S.anim.t = a.length; stopPlay(); } }
+    renderCanvas(); renderTimelineHead();
+    playRaf = requestAnimationFrame(step);
+  };
+  playRaf = requestAnimationFrame(step);
+  renderTimeline();
+}
+function stopPlay() { S.anim.playing = false; cancelAnimationFrame(playRaf); S.anim.t = Math.round(S.anim.t); if (S.dock) { renderTimeline(); renderCanvas(); } }
+function renderTimelineHead() {
+  const ph = $('#tlPlayhead'); if (ph) ph.style.left = (S.anim.t * PX_PER_TICK) + 'px';
+  const tm = $('#tlTime'); if (tm) tm.textContent = `${Math.round(S.anim.t)}t · ${(S.anim.t / 20).toFixed(2)}s`;
+}
+function renderTimeline() {
+  dock.hidden = !S.dock;
+  if (!S.dock) return;
+  const d = doc(), a = curAnim(), e = selected()[0];
+  const bar = h('div', {class: 'dockbar'});
+  const sel = h('select', {id: 'tlAnim', onchange: ev => { S.anim.id = ev.target.value || null; S.anim.t = 0; render(); }},
+    h('option', {value: ''}, d.animations.length ? '— pick animation —' : 'no animations'),
+    ...d.animations.map(x => h('option', {value: x.id, selected: x.id === S.anim.id}, x.name)));
+  bar.append(
+    h('button', {class: 'icon-btn', title: 'Play / pause (Space in timeline)', onclick: togglePlay, disabled: !a}, S.anim.playing ? '❚❚' : '▶'),
+    h('span', {class: 'time', id: 'tlTime'}, `${Math.round(S.anim.t)}t · ${(S.anim.t / 20).toFixed(2)}s`),
+    sel,
+    h('button', {class: 'btn sm', onclick: newAnimation}, '+ New'));
+  if (a) {
+    const nm = h('input', {value: a.name, style: {width: '110px'}, title: 'Name (used by Play animation nodes)', onchange: ev => mutate(() => a.name = ev.target.value.trim() || a.name)});
+    const len = h('input', {type: 'number', min: 1, value: a.length, style: {width: '64px'}, title: 'Length in ticks', onchange: ev => mutate(() => a.length = Math.max(1, Math.round(+ev.target.value || 1)))});
+    const loop = h('label', {class: 'check', style: {margin: 0}}, h('input', {type: 'checkbox', checked: a.loop, onchange: ev => mutate(() => a.loop = ev.target.checked)}), 'Loop');
+    const auto = h('label', {class: 'check', style: {margin: 0}}, h('input', {type: 'checkbox', checked: a.autoplay, onchange: ev => mutate(() => a.autoplay = ev.target.checked)}), 'Autoplay');
+    const rec = h('button', {class: 'btn sm' + (S.anim.auto ? ' primary' : ''), title: 'When on, changes to position/size/rotation/scale/opacity become keyframes', onclick: () => { S.anim.auto = !S.anim.auto; renderTimeline(); }}, S.anim.auto ? '● Auto-key' : '○ Auto-key');
+    bar.append(nm, len, h('span', {class: 'lab'}, 'ticks'), loop, auto, rec,
+      h('button', {class: 'btn sm danger', onclick: () => { mutate(dd => dd.animations = dd.animations.filter(x => x.id !== a.id)); S.anim.id = null; render(); }}, 'Delete'));
+    const k = S.anim.selKey && findKey(a, S.anim.selKey);
+    if (k) {
+      bar.append(h('span', {class: 'lab', style: {marginLeft: '8px'}}, 'Key'),
+        h('input', {type: 'number', value: k.k.t, style: {width: '58px'}, title: 'Tick', onchange: ev => mutate(() => { k.k.t = clamp(Math.round(+ev.target.value), 0, a.length); k.t.keys.sort((p, q) => p.t - q.t); })}),
+        h('input', {type: 'number', step: 'any', value: round(k.k.v, 3), style: {width: '70px'}, title: 'Value', onchange: ev => mutate(() => k.k.v = +ev.target.value)}),
+        h('select', {title: 'Easing to the next key', onchange: ev => mutate(() => k.k.ease = ev.target.value)},
+          ...['linear', 'ease-in', 'ease-out', 'ease-in-out', 'back', 'bounce', 'step'].map(o => h('option', {value: o, selected: k.k.ease === o}, o))),
+        h('button', {class: 'btn sm danger', onclick: () => { mutate(() => k.t.keys.splice(k.t.keys.indexOf(k.k), 1)); S.anim.selKey = null; render(); }}, 'Delete key'));
+    }
+  }
+  const tl = h('div', {class: 'tl'});
+  const left = h('div', {class: 'tl-left'}), right = h('div', {class: 'tl-right', id: 'tlRight'});
+  left.append(h('div', {class: 'tl-row head'}, e ? e.name : (a ? 'Select an element' : 'Create an animation')));
+  const width = ((a ? a.length : 20) + 6) * PX_PER_TICK;
+  const ruler = h('div', {class: 'ruler', style: {width: width + 'px'}});
+  for (let t = 0; t <= (a ? a.length : 20) + 5; t++) {
+    ruler.append(h('i', {style: {left: t * PX_PER_TICK + 'px', height: t % 5 ? '4px' : '8px'}}));
+    if (t % 5 === 0) ruler.append(h('span', {style: {left: t * PX_PER_TICK + 'px'}}, String(t)));
+  }
+  const scrub = ev => { const r = ruler.getBoundingClientRect(); S.anim.t = clamp(Math.round((ev.clientX - r.left) / PX_PER_TICK), 0, a ? a.length : 0); renderCanvas(); renderTimelineHead(); renderPanelLive(); };
+  ruler.addEventListener('pointerdown', ev => { if (!a) return; stopPlay(); scrub(ev); ruler.setPointerCapture(ev.pointerId); ruler.onpointermove = scrub; ruler.onpointerup = () => { ruler.onpointermove = null; renderPanel(); }; });
+  right.append(ruler);
+  if (a && e) {
+    for (const p of ANIM_PROPS) {
+      const t = track(a, e.id, p);
+      left.append(h('div', {class: 'tl-row'}, PROP_LABEL[p], h('button', {title: 'Add keyframe at playhead', onclick: () => addKeyAtPlayhead(e, p)}, '+')));
+      const row = h('div', {class: 'track', style: {width: width + 'px'}});
+      if (t && t.keys.length > 1) row.append(h('div', {class: 'bar', style: {left: t.keys[0].t * PX_PER_TICK + 'px', width: (t.keys[t.keys.length - 1].t - t.keys[0].t) * PX_PER_TICK + 'px'}}));
+      if (t) for (const k of t.keys) {
+        const id = e.id + '|' + p + '|' + t.keys.indexOf(k);
+        const kf = h('div', {class: 'kf' + (S.anim.selKey === id ? ' on' : ''), style: {left: k.t * PX_PER_TICK + 'px'}, title: `${k.t}t = ${round(k.v, 3)} (${k.ease})`});
+        kf.addEventListener('pointerdown', ev => {
+          ev.stopPropagation();
+          S.anim.selKey = id;
+          const snap = snapshot(), sx = ev.clientX, t0 = k.t;
+          kf.setPointerCapture(ev.pointerId);
+          kf.onpointermove = m => { k.t = clamp(Math.round(t0 + (m.clientX - sx) / PX_PER_TICK), 0, a.length); kf.style.left = k.t * PX_PER_TICK + 'px'; };
+          kf.onpointerup = () => { kf.onpointermove = null; t.keys.sort((x, y) => x.t - y.t); S.anim.selKey = e.id + '|' + p + '|' + t.keys.indexOf(k); if (snapshot() !== snap) pushUndo(snap); S.anim.t = k.t; afterChange(); };
+        });
+        row.append(kf);
+      }
+      right.append(row);
+    }
+  } else if (a) {
+    // overview: one row per element that has tracks
+    const ids = [...new Set(a.tracks.map(t => t.element))];
+    for (const id of ids) {
+      const el = byId(id); if (!el) continue;
+      left.append(h('div', {class: 'tl-row', style: {cursor: 'pointer'}, onclick: () => { S.sel = [id]; render(); }}, el.name, h('span', {class: 'lab'}, a.tracks.filter(t => t.element === id).length + ' tracks')));
+      const row = h('div', {class: 'track', style: {width: width + 'px'}});
+      for (const t of a.tracks.filter(t => t.element === id)) for (const k of t.keys) row.append(h('div', {class: 'kf', style: {left: k.t * PX_PER_TICK + 'px', background: 'var(--faint)'}}));
+      right.append(row);
+    }
+    if (!ids.length) left.append(h('div', {class: 'tl-row'}, 'Select an element, then press + on a property.'));
+  }
+  if (a) {
+    right.append(h('div', {class: 'endline', style: {left: a.length * PX_PER_TICK + 'px'}}));
+    right.append(h('div', {class: 'playhead', id: 'tlPlayhead', style: {left: S.anim.t * PX_PER_TICK + 'px'}}));
+  }
+  tl.append(left, right);
+  const prevScroll = $('#tlRight')?.scrollLeft || 0;
+  dock.replaceChildren(bar, tl);
+  right.scrollLeft = prevScroll;
+  right.addEventListener('scroll', () => { left.scrollTop = right.scrollTop; });
+}
+function findKey(a, key) {
+  const [id, p, i] = key.split('|');
+  const t = track(a, id, p);
+  return t && t.keys[+i] ? {t, k: t.keys[+i]} : null;
+}
+function addKeyAtPlayhead(e, p) {
+  const a = curAnim(); if (!a) return;
+  const v = vals(e)[p];
+  mutate(() => {
+    const t = track(a, e.id, p, true);
+    const tick = Math.round(S.anim.t);
+    const k = t.keys.find(k => k.t === tick);
+    if (k) k.v = v; else t.keys.push({t: tick, v, ease: 'linear'});
+    t.keys.sort((x, y) => x.t - y.t);
+  });
+}
+
+/* ============================================================== script editor */
+const script = $('#script');
+const SC = {zoom: 1, panX: 40, panY: 30, sel: null, wire: null};
+function toggleScript() { S.scriptOpen = !S.scriptOpen; if (S.scriptOpen) S.dock = false; render(); }
+function renderScript() {
+  script.hidden = !S.scriptOpen;
+  if (!S.scriptOpen) return;
+  const top = h('div', {class: 'sc-top'},
+    h('span', {class: 'ttl'}, doc().name + '.script'),
+    h('span', {class: 'lab'}, doc().script.nodes.length + ' nodes'),
+    h('button', {class: 'btn sm ghost', onclick: () => { SC.zoom = 1; SC.panX = 40; SC.panY = 30; renderNodes(); }}, 'Reset view'),
+    h('button', {class: 'btn sm', onclick: openCode}, '‹› Code'),
+    h('button', {class: 'btn sm', onclick: startPreview}, '▶ Preview'),
+    h('button', {class: 'btn sm primary', onclick: toggleScript}, 'Done'));
+  const search = h('input', {class: 'inp', placeholder: 'Search nodes…', id: 'nodeSearch'});
+  const pal = h('div', {class: 'palette'}, search);
+  const list = h('div');
+  const fill = () => {
+    const q = search.value.toLowerCase();
+    list.replaceChildren();
+    for (const [cat, [label, color]] of Object.entries(CAT)) {
+      const items = Object.entries(NODE_TYPES).filter(([k, v]) => v.cat === cat && (!q || v.label.toLowerCase().includes(q) || k.includes(q)));
+      if (!items.length) continue;
+      list.append(h('div', {class: 'grp'}, h('i', {style: {background: color}}), label));
+      for (const [k, v] of items) list.append(h('button', {onclick: () => addNode(k)}, v.label));
+    }
+  };
+  search.addEventListener('input', fill);
+  fill();
+  pal.append(list);
+  const area = h('div', {id: 'nodes'}, h('div', {id: 'nodeLayer'}));
+  script.replaceChildren(top, pal, area);
+  wireNodeArea(area);
+  renderNodes();
+}
+function addNode(type) {
+  const area = $('#nodes').getBoundingClientRect();
+  const x = (area.width / 2 - SC.panX) / SC.zoom - 118 + (Math.random() * 40 - 20), y = (area.height / 2 - SC.panY) / SC.zoom - 60 + (Math.random() * 40 - 20);
+  const props = {};
+  for (const f of NODE_TYPES[type].fields) {
+    if (f.kind === 'select') props[f.k] = f.opts[0];
+    else if (f.def) props[f.k] = f.def;
+    else if (f.kind === 'color') props[f.k] = '#ff8fd1';
+    else if (f.kind === 'element' && !f.any && selected()[0]) props[f.k] = selected()[0].id;
+  }
+  const n = {id: rid('n'), type, x: Math.round(x), y: Math.round(y), props, next: {}};
+  mutate(d => d.script.nodes.push(n));
+  SC.sel = n.id;
+  renderNodes();
+}
+function nodeField(n, f) {
+  const set = v => mutate(() => { n.props[f.k] = v; }, {keepScript: true});
+  const val = n.props[f.k] ?? '';
+  let input;
+  if (f.kind === 'element') {
+    input = h('select', {class: 'inp'}, h('option', {value: ''}, f.any ? 'Any element' : '— pick —'),
+      ...els().map(e => h('option', {value: e.id, selected: e.id === val}, e.name)));
+  } else if (f.kind === 'select') {
+    input = h('select', {class: 'inp'}, ...f.opts.map(o => h('option', {value: o, selected: o === val}, o)));
+  } else if (f.kind === 'sprite') {
+    input = h('select', {class: 'inp'}, h('option', {value: ''}, '— pick —'), ...doc().sprites.map(s => h('option', {value: s.id, selected: s.id === val}, s.id)));
+  } else if (f.kind === 'anim') {
+    input = h('select', {class: 'inp'}, h('option', {value: ''}, '— pick —'), ...doc().animations.map(a => h('option', {value: a.name, selected: a.name === val || a.id === val}, a.name)));
+  } else if (f.kind === 'color') {
+    input = h('input', {class: 'inp', type: 'color', value: /^#[0-9a-f]{6}$/i.test(val) ? val : '#ffffff', style: {padding: '1px', height: '26px'}});
+  } else {
+    input = h('input', {class: 'inp', value: val, placeholder: f.ph || f.def || ''});
+  }
+  input.addEventListener('change', () => set(input.value));
+  input.addEventListener('pointerdown', ev => ev.stopPropagation());
+  return h('div', {class: 'nf'}, h('span', {}, f.label), input);
+}
+function renderNodes() {
+  const layer = $('#nodeLayer'); if (!layer) return;
+  layer.style.transform = `translate(${SC.panX}px,${SC.panY}px) scale(${SC.zoom})`;
+  const wires = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  wires.id = 'wires'; wires.setAttribute('width', '1'); wires.setAttribute('height', '1');
+  const kids = [wires];
+  for (const n of doc().script.nodes) {
+    const def = NODE_TYPES[n.type] || {cat: 'action', label: n.type, fields: []};
+    const color = CAT[def.cat][1];
+    const el = h('div', {class: 'node' + (SC.sel === n.id ? ' on' : ''), 'data-id': n.id, style: {left: n.x + 'px', top: n.y + 'px'}});
+    const head = h('div', {class: 'nh'}, h('i', {style: {background: color}}), def.label,
+      h('button', {class: 'del', title: 'Delete node', onclick: ev => { ev.stopPropagation(); deleteNode(n.id); }}, '×'));
+    el.append(head);
+    if (def.cat !== 'event') el.append(h('div', {class: 'port in', title: 'Input'}));
+    const body = h('div', {class: 'nb'}, ...def.fields.map(f => nodeField(n, f)));
+    const outs = h('div', {class: 'outs'});
+    for (const port of def.branch ? ['true', 'false'] : ['then']) {
+      outs.append(h('div', {class: 'out ' + port}, port === 'then' ? 'Then' : port === 'true' ? 'True' : 'False', h('div', {class: 'port', 'data-port': port, 'data-node': n.id})));
+    }
+    body.append(outs);
+    el.append(body);
+    head.addEventListener('pointerdown', ev => {
+      if (ev.target.closest('.del')) return;
+      ev.stopPropagation();
+      SC.sel = n.id;
+      $$('.node.on').forEach(x => x.classList.remove('on')); el.classList.add('on');
+      const sx = ev.clientX, sy = ev.clientY, x0 = n.x, y0 = n.y, snap = snapshot();
+      head.setPointerCapture(ev.pointerId);
+      head.onpointermove = m => { n.x = Math.round(x0 + (m.clientX - sx) / SC.zoom); n.y = Math.round(y0 + (m.clientY - sy) / SC.zoom); el.style.left = n.x + 'px'; el.style.top = n.y + 'px'; drawWires(); };
+      head.onpointerup = () => { head.onpointermove = null; if (snapshot() !== snap) { pushUndo(snap); saveLocal(); } };
+    });
+    kids.push(el);
+  }
+  layer.replaceChildren(...kids);
+  drawWires();
+}
+function portPos(nodeId, port) {
+  const layer = $('#nodeLayer');
+  const n = layer.querySelector(`.node[data-id="${nodeId}"]`);
+  if (!n) return null;
+  const p = port === 'in' ? n.querySelector('.port.in') : n.querySelector(`.port[data-port="${port}"]`);
+  if (!p) return {x: n.offsetLeft, y: n.offsetTop + 18};
+  let x = p.offsetLeft + p.offsetWidth / 2, y = p.offsetTop + p.offsetHeight / 2, o = p.offsetParent;
+  while (o && o !== layer) { x += o.offsetLeft; y += o.offsetTop; o = o.offsetParent; }
+  return {x, y};
+}
+function bez(a, b) { const dx = Math.max(40, Math.abs(b.x - a.x) * .5); return `M${a.x},${a.y} C${a.x + dx},${a.y} ${b.x - dx},${b.y} ${b.x},${b.y}`; }
+function drawWires() {
+  const w = $('#wires'); if (!w) return;
+  const paths = [];
+  for (const n of doc().script.nodes) for (const [port, list] of Object.entries(n.next || {})) for (const to of list || []) {
+    const a = portPos(n.id, port), b = portPos(to, 'in');
+    if (!a || !b) continue;
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', bez(a, b));
+    if (port === 'true') p.classList.add('t'); if (port === 'false') p.classList.add('f');
+    p.innerHTML = '<title>Click to disconnect</title>';
+    p.addEventListener('click', () => mutate(() => { n.next[port] = n.next[port].filter(x => x !== to); }, {keepScript: true}));
+    paths.push(p);
+  }
+  if (SC.wire) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', bez(SC.wire.a, SC.wire.b)); p.classList.add('temp'); paths.push(p);
+  }
+  w.replaceChildren(...paths);
+}
+function deleteNode(id) {
+  mutate(d => {
+    d.script.nodes = d.script.nodes.filter(n => n.id !== id);
+    for (const n of d.script.nodes) for (const k of Object.keys(n.next || {})) n.next[k] = n.next[k].filter(x => x !== id);
+  }, {keepScript: true});
+}
+function wireNodeArea(area) {
+  const toLayer = ev => { const r = area.getBoundingClientRect(); return {x: (ev.clientX - r.left - SC.panX) / SC.zoom, y: (ev.clientY - r.top - SC.panY) / SC.zoom}; };
+  area.addEventListener('wheel', ev => {
+    ev.preventDefault();
+    const r = area.getBoundingClientRect();
+    if (ev.ctrlKey || ev.metaKey) {
+      const nz = clamp(SC.zoom * Math.exp(-ev.deltaY * .002), .3, 2), cx = ev.clientX - r.left, cy = ev.clientY - r.top;
+      SC.panX = cx - (cx - SC.panX) * nz / SC.zoom; SC.panY = cy - (cy - SC.panY) * nz / SC.zoom; SC.zoom = nz;
+    } else { SC.panX -= ev.deltaX; SC.panY -= ev.deltaY; }
+    $('#nodeLayer').style.transform = `translate(${SC.panX}px,${SC.panY}px) scale(${SC.zoom})`;
+  }, {passive: false});
+  area.addEventListener('pointerdown', ev => {
+    const port = ev.target.closest('.port[data-port]');
+    if (port) {
+      ev.stopPropagation();
+      const from = port.dataset.node, which = port.dataset.port;
+      SC.wire = {a: portPos(from, which), b: toLayer(ev)};
+      area.setPointerCapture(ev.pointerId);
+      let over = null;
+      area.onpointermove = m => {
+        SC.wire.b = toLayer(m);
+        const target = document.elementFromPoint(m.clientX, m.clientY)?.closest('.node');
+        if (over && over !== target) over.classList.remove('drop');
+        over = target && target.dataset.id !== from ? target : null;
+        if (over) over.classList.add('drop');
+        drawWires();
+      };
+      area.onpointerup = () => {
+        area.onpointermove = null; area.onpointerup = null; SC.wire = null;
+        if (over) {
+          over.classList.remove('drop');
+          const to = over.dataset.id, toNode = doc().script.nodes.find(n => n.id === to);
+          if (toNode && NODE_TYPES[toNode.type]?.cat === 'event') toast('Events start chains, they cannot be connected into.', 'err');
+          else mutate(() => { const n = doc().script.nodes.find(x => x.id === from); n.next = n.next || {}; const l = n.next[which] = n.next[which] || []; if (!l.includes(to)) l.push(to); }, {keepScript: true});
+        }
+        drawWires();
+      };
+      return;
+    }
+    if (ev.target.closest('.node')) return;
+    SC.sel = null; $$('.node.on').forEach(x => x.classList.remove('on'));
+    const sx = ev.clientX, sy = ev.clientY, px = SC.panX, py = SC.panY;
+    area.setPointerCapture(ev.pointerId);
+    area.onpointermove = m => { SC.panX = px + m.clientX - sx; SC.panY = py + m.clientY - sy; $('#nodeLayer').style.transform = `translate(${SC.panX}px,${SC.panY}px) scale(${SC.zoom})`; };
+    area.onpointerup = () => { area.onpointermove = null; area.onpointerup = null; };
+  });
+}
+/* ============================================================== modals */
+function modal(title, body, actions = []) {
+  const bg = h('div', {class: 'modal-bg', onpointerdown: ev => { if (ev.target === bg) close(); }});
+  const close = () => { bg.remove(); document.removeEventListener('keydown', onKey, true); };
+  const onKey = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); close(); } };
+  document.addEventListener('keydown', onKey, true);
+  const m = h('div', {class: 'modal', role: 'dialog', 'aria-label': title},
+    h('header', {}, title, h('button', {class: 'icon-btn', title: 'Close', onclick: close}, '×')),
+    h('div', {class: 'body'}, ...[].concat(body)),
+    actions.length ? h('footer', {}, ...actions.map(a => typeof a === 'function' ? a(close) : a)) : null);
+  bg.append(m);
+  document.body.append(bg);
+  return {close, el: m};
+}
+async function copyText(text, label = 'Copied') {
+  try { await navigator.clipboard.writeText(text); toast(label, 'ok'); }
+  catch { toast('Copy blocked here, select the text and press Ctrl+C', 'err'); }
+}
+function exportJson() { return JSON.stringify(cleanForExport(doc()), null, 2); }
+function cleanForExport(d) {
+  const out = clone(d);
+  out.elements = out.elements.map(e => { const c = {...e}; delete c.locked; return c; });
+  return out;
+}
+function validate(d) {
+  const w = [];
+  if (!d.id) w.push('The UI has no ID.');
+  const ids = new Set();
+  for (const e of d.elements) { if (ids.has(e.id)) w.push(`Duplicate element ID "${e.id}".`); ids.add(e.id); }
+  if (d.type === 'hud') {
+    for (const e of d.elements) {
+      if (e.type === 'item' || e.type === 'head') w.push(`"${e.name}": items and heads don't render on HUDs.`);
+      if (/[^\x20-\x7e]/.test((e.text || '').replace(/<[^>]*>/g, ''))) w.push(`"${e.name}": HUD text only supports plain ASCII characters.`);
+      if (e.rotation || (e.scale !== 1)) w.push(`"${e.name}": rotation and scale are ignored on HUDs.`);
+    }
+  }
+  for (const n of d.script.nodes) {
+    const def = NODE_TYPES[n.type];
+    if (!def) { w.push(`Unknown script node "${n.type}".`); continue; }
+    for (const f of def.fields) if (f.kind === 'element' && !f.any && n.props[f.k] && !ids.has(n.props[f.k])) w.push(`${def.label}: element "${n.props[f.k]}" no longer exists.`);
+    if (def.cat === 'event' && !(n.next?.then || []).length) w.push(`${def.label} is not connected to anything.`);
+  }
+  if (d.type === 'screen' && !d.settings.command && !d.script.nodes.some(n => n.type === 'on_command')) w.push('No command opens this UI yet. Set one in the UI panel (click empty canvas) or use /sui open ' + d.id + '.');
+  return w;
+}
+function openExport() {
+  const json = exportJson(), d = doc(), warns = validate(d);
+  const kb = Math.round(json.length / 1024);
+  const pre = h('pre', {}, json.length > 60000 ? json.slice(0, 60000) + '\n… (' + kb + ' KB total, use Copy to get everything)' : json);
+  modal('Export ' + d.id + '.json', [
+    h('p', {}, 'Save this as ', h('b', {}, d.id + '.json'), ' in ', h('code', {}, 'plugins/SilentUI/uis/'), ', then run ', h('code', {}, '/sui reload'), '. Or use Push to server to skip the file.'),
+    warns.length ? h('div', {class: 'sec', style: {border: '1px solid var(--warn)', borderRadius: '8px', color: 'var(--warn)'}}, h('h4', {style: {color: 'var(--warn)'}}, 'Check before export'), ...warns.map(x => h('div', {}, '• ' + x))) : null,
+    pre
+  ], [
+    h('span', {class: 'lab', style: {marginRight: 'auto'}}, kb + ' KB'),
+    h('button', {class: 'btn', onclick: () => copyText(json, 'JSON copied')}, 'Copy JSON'),
+    h('button', {class: 'btn primary', onclick: () => download(d.id + '.json', json)}, 'Download')
+  ]);
+}
+function download(name, text) {
+  try {
+    const url = URL.createObjectURL(new Blob([text], {type: 'application/json'}));
+    const a = h('a', {href: url, download: name}); document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('Download started (if nothing happens here, use Copy JSON)');
+  } catch { toast('Downloads are blocked here, use Copy JSON', 'err'); }
+}
+function serverDefault() {
+  const saved = store.get('server', '');
+  if (saved) return saved;
+  if (/^https?:$/.test(location.protocol) && /\/editor\/?$/.test(location.pathname)) return location.origin;
+  return '';
+}
+async function api(path, opts = {}) {
+  const base = $('#srvUrl').value.trim().replace(/\/+$/, ''), token = $('#srvToken').value.trim();
+  store.set('server', base); store.set('token', token);
+  if (!base) throw new Error('Enter the server address, e.g. http://play.example.com:8163');
+  const res = await fetch(base + path, {...opts, headers: {'Content-Type': 'application/json', 'X-SilentUI-Token': token, ...(opts.headers || {})}});
+  const txt = await res.text();
+  let data; try { data = JSON.parse(txt); } catch { data = {ok: false, error: txt.slice(0, 200)}; }
+  if (!res.ok || data.ok === false) throw new Error(data.error || res.statusText);
+  return data;
+}
+function openPush() {
+  const list = h('div', {style: {display: 'flex', flexDirection: 'column', gap: '6px'}});
+  const status = h('p', {}, '');
+  const insecure = location.protocol === 'https:';
+  modal('Server connection', [
+    h('p', {}, 'Push sends this UI straight to your server, saves it in plugins/SilentUI/uis and reloads. Open the editor from your server (', h('code', {}, '/sui editor'), ') so this works without browser blocks.'),
+    insecure ? h('p', {style: {color: 'var(--warn)'}}, 'This copy of the editor runs on https, so browsers block requests to an http:// server. Use the editor your plugin hosts, or Export instead.') : null,
+    field('Server', h('input', {class: 'inp', id: 'srvUrl', value: serverDefault(), placeholder: 'http://your-server-ip:8163'})),
+    field('Token', h('input', {class: 'inp', id: 'srvToken', value: store.get('token', ''), placeholder: 'web.upload-token from config.yml', type: 'password'})),
+    status, list
+  ], [
+    h('button', {class: 'btn', onclick: async () => {
+      status.textContent = 'Loading…';
+      try {
+        const r = await api('/api/uis');
+        status.textContent = r.uis.length + ' UI(s) on the server:';
+        list.replaceChildren(...r.uis.map(u => h('div', {style: {display: 'flex', alignItems: 'center', gap: '8px'}},
+          h('span', {style: {flex: 1}}, u.name, ' ', h('span', {class: 'lab'}, u.id + ' · ' + u.type)),
+          h('button', {class: 'btn sm', onclick: async () => { try { openTab(await api('/api/ui?id=' + encodeURIComponent(u.id))); toast('Opened ' + u.id, 'ok'); } catch (e) { toast(e.message, 'err'); } }}, 'Open'))));
+      } catch (e) { status.textContent = '✕ ' + e.message; }
+    }}, 'Load server UIs'),
+    h('button', {class: 'btn primary', onclick: async () => {
+      status.textContent = 'Pushing…';
+      try { await api('/api/upload', {method: 'POST', body: exportJson()}); status.textContent = '✓ Pushed and reloaded on the server.'; toast('Pushed ' + doc().id, 'ok'); }
+      catch (e) { status.textContent = '✕ ' + e.message; }
+    }}, 'Push ' + doc().id)
+  ]);
+}
+function openCode() {
+  const ta = h('textarea', {class: 'code', rows: 22, spellcheck: 'false'});
+  ta.value = exportJson();
+  modal('Code · ' + doc().id + '.json', [h('p', {}, 'The exact file the plugin reads. You can edit it and apply.'), ta], [
+    h('button', {class: 'btn', onclick: () => copyText(ta.value, 'JSON copied')}, 'Copy'),
+    close => h('button', {class: 'btn primary', onclick: () => {
+      try { const d = normalize(JSON.parse(ta.value)); pushUndo(); S.docs[S.cur] = d; S.sel = []; afterChange(); close(); toast('Applied', 'ok'); }
+      catch (e) { toast('Invalid JSON: ' + e.message, 'err'); }
+    }}, 'Apply')
+  ]);
+}
+function openHelp() {
+  const rows = [['V R T B I N G E H', 'Tools: select, rectangle, text, button, image, input, progress, item, head'], ['Drag on canvas', 'Draw with the active tool (hold Shift to keep the tool)'],
+    ['Shift + drag', 'Lock axis / keep ratio / snap rotation to 15°'], ['Alt + drag', 'Duplicate while moving'], ['Arrows', 'Nudge 1px (Shift: 10px)'], ['Space + drag, scroll', 'Pan'],
+    ['Ctrl + scroll', 'Zoom'], ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl+C / V / D', 'Copy / paste / duplicate'], ['[ and ]', 'Send to back / bring to front'],
+    ['A / K / P', 'Timeline / scripts / preview'], ['Ctrl+E', 'Export']];
+  modal('Silent UI editor', [
+    h('p', {}, 'Build the UI here, export it (or push it), and the plugin draws it in game with display entities (screens and world UIs) or bossbar glyphs (HUDs). No client mods.'),
+    h('div', {}, ...rows.map(([k, v]) => h('div', {class: 'row', style: {gridTemplateColumns: '170px 1fr'}}, h('code', {style: {color: 'var(--accent)'}}, k), h('span', {}, v)))),
+    h('p', {}, 'Placeholders: {player} {level} {health} {online} {time} {date} {var:name} and any %placeholderapi% value. Text accepts MiniMessage tags like <#ff8fd1>, <bold>, <gray>.')
+  ]);
+}
+
+/* ============================================================== sprites */
+function openSprites() {
+  let m;
+  const grid = h('div', {class: 'sprites'});
+  const fillGrid = () => {
+    grid.replaceChildren(...doc().sprites.map(s => {
+      const name = h('input', {class: 'inp', value: s.id, title: 'Sprite ID'});
+      name.addEventListener('change', () => renameSprite(s, name.value));
+      return h('div', {class: 'sprite'}, h('div', {class: 'th'}, h('img', {src: s.data, alt: s.id})), name,
+        h('div', {class: 'meta'}, s.width + '×' + s.height + ' · ' + Math.round(s.data.length * .75 / 1024 * 10) / 10 + ' KB'),
+        h('div', {class: 'acts'},
+          h('button', {class: 'btn sm', onclick: () => { m.close(); addElement('image', {sprite: s.id, w: s.width, h: s.height, x: Math.round(doc().canvas.width / 2 - s.width / 2), y: Math.round(doc().canvas.height / 2 - s.height / 2), name: s.id}); }}, 'Place'),
+          h('button', {class: 'btn sm danger', onclick: () => { mutate(d => d.sprites = d.sprites.filter(x => x !== s)); fillGrid(); }}, 'Delete')));
+    }));
+    if (!doc().sprites.length) grid.append(h('p', {style: {gridColumn: '1/-1'}}, 'No sprites yet. Drop PNGs above or generate one below.'));
+  };
+  const dz = h('div', {class: 'drop'}, 'Drop PNG files here, paste an image, or ', h('button', {class: 'btn sm', onclick: () => $('#fileSprite').click()}, 'Choose files'));
+  dz.addEventListener('dragover', ev => { ev.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', async ev => { ev.preventDefault(); dz.classList.remove('over'); await importImages(ev.dataTransfer.files); fillGrid(); });
+  spriteRefresh = fillGrid;
+  // generator
+  const g = {kind: 'rounded', w: 64, h: 24, r: 5, fill: '#2a2633', fill2: '#16131b', alpha: 1, border: '#ff8fd1', bw: 0, icon: '', iconColor: '#ffffff', vgrad: false};
+  const prev = h('img', {style: {imageRendering: 'pixelated', maxWidth: '100%', maxHeight: '110px', minWidth: '40px'}});
+  const upd = () => { prev.src = genShape(shapeOpts(g)); };
+  const gi = (label, k, type = 'number', extra = {}) => {
+    const i = h('input', {class: 'inp', type, value: g[k], ...extra});
+    i.addEventListener('input', () => { g[k] = type === 'number' ? +i.value : i.value; upd(); });
+    return field(label, i);
+  };
+  const kindSel = h('select', {class: 'inp'}, ...[['rounded', 'Rounded panel'], ['circle', 'Circle'], ['pill', 'Pill'], ['gradient', 'Gradient bar'], ['vgrad', 'Vertical gradient panel'], ['icon', 'Pixel icon']].map(([v, l]) => h('option', {value: v}, l)));
+  kindSel.addEventListener('change', () => { g.kind = kindSel.value; upd(); });
+  const iconSel = h('select', {class: 'inp'}, h('option', {value: ''}, 'none'), ...['close', 'gem', 'clock', 'user', 'star', 'home', 'cart', 'gear', 'portal', 'chart'].map(v => h('option', {value: v}, v)));
+  iconSel.addEventListener('change', () => { g.icon = iconSel.value; upd(); });
+  const nameIn = h('input', {class: 'inp', placeholder: 'panel_dark', value: 'shape'});
+  const gen = h('div', {class: 'sec', style: {border: '1px solid var(--line)', borderRadius: '10px'}},
+    h('h4', {}, 'Generate a sprite'),
+    h('div', {style: {display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 150px', gap: '14px'}},
+      h('div', {}, field('Shape', kindSel), h('div', {class: 'row2'}, gi('W', 'w', 'number', {min: 1, max: 256}), gi('H', 'h', 'number', {min: 1, max: 256})),
+        gi('Radius', 'r'), gi('Colour', 'fill', 'color'), gi('Colour 2', 'fill2', 'color'), gi('Opacity', 'alpha', 'number', {step: .05, min: 0, max: 1}),
+        gi('Border', 'border', 'color'), gi('Border px', 'bw'), field('Icon', iconSel), gi('Icon colour', 'iconColor', 'color'), field('ID', nameIn)),
+      h('div', {style: {display: 'grid', placeItems: 'center', background: 'var(--stage)', borderRadius: '8px', minHeight: '120px'}}, prev)),
+    h('div', {style: {display: 'flex', justifyContent: 'flex-end', marginTop: '8px'}},
+      h('button', {class: 'btn primary', onclick: async () => { await addSpriteFromDataUrl(genShape(shapeOpts(g)), nameIn.value || 'shape'); fillGrid(); toast('Sprite created', 'ok'); }}, 'Create sprite')));
+  upd();
+  m = modal('Sprites', [dz, grid, gen]);
+  m.el.style.width = 'min(860px,100%)';
+  fillGrid();
+}
+let spriteRefresh = null;
+function shapeOpts(g) {
+  const o = {w: clamp(Math.round(g.w) || 1, 1, 256), h: clamp(Math.round(g.h) || 1, 1, 256), r: g.r, fill: g.fill, fill2: g.fill2, alpha: g.alpha, border: g.border, bw: g.bw, icon: g.icon, iconColor: g.iconColor};
+  if (g.kind === 'circle') o.kind = 'circle';
+  if (g.kind === 'pill') o.r = 999;
+  if (g.kind === 'gradient') o.kind = 'gradient';
+  if (g.kind === 'vgrad') o.vgrad = true;
+  if (g.kind === 'icon') { o.alpha = 0; o.bw = 0; if (!o.icon) o.icon = 'star'; }
+  return o;
+}
+function renameSprite(s, raw) {
+  const id = slug(raw);
+  if (!id || id === s.id) return;
+  if (doc().sprites.some(x => x.id === id)) return toast('Sprite ID already used', 'err');
+  const old = s.id;
+  mutate(d => {
+    s.id = id;
+    for (const e of d.elements) for (const k of ['sprite', 'hoverSprite', 'barSprite']) if (e[k] === old) e[k] = id;
+    if (d.settings.cursorSprite === old) d.settings.cursorSprite = id;
+    for (const n of d.script.nodes) if (n.props.sprite === old) n.props.sprite = id;
+  });
+}
+async function importImages(files) {
+  for (const f of files) {
+    if (!f.type.startsWith('image/')) continue;
+    const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
+    try { await addSpriteFromDataUrl(url, f.name.replace(/\.[^.]+$/, '')); } catch { toast('Could not read ' + f.name, 'err'); }
+  }
+  toast('Sprites added', 'ok');
+}
+$('#fileSprite').addEventListener('change', async ev => { await importImages(ev.target.files); ev.target.value = ''; if (spriteRefresh) spriteRefresh(); });
+$('#fileOpen').addEventListener('change', async ev => {
+  const f = ev.target.files[0]; ev.target.value = '';
+  if (!f) return;
+  try { openTab(JSON.parse(await f.text())); toast('Opened ' + f.name, 'ok'); } catch (e) { toast('Not a Silent UI file: ' + e.message, 'err'); }
+});
+document.addEventListener('paste', async ev => {
+  if (ev.target.closest('input,textarea')) return;
+  const files = [...(ev.clipboardData?.files || [])].filter(f => f.type.startsWith('image/'));
+  if (files.length) { ev.preventDefault(); await importImages(files); if (spriteRefresh) spriteRefresh(); }
+});
+
+/* ============================================================== preview (runs the UI like the plugin does) */
+const pvEl = $('#preview');
+let PV = null;
+function startPreview() {
+  stopPlay();
+  closeMenus();
+  const d = clone(doc());
+  PV = {d, states: {}, hover: null, anims: [], vars: {}, ticks: 0, acc: 0, last: performance.now(), raf: 0, chat: [], mouse: null, closed: false, input: null, slot: 0, fadeUntil: 0, title: null};
+  for (const e of d.elements) PV.states[e.id] = {...e};
+  for (const a of d.animations) if (a.autoplay) pvPlay(a.name);
+  pvEl.hidden = false;
+  pvEl.replaceChildren(h('div', {class: 'scene'}), h('div', {class: 'pv-dim', style: {opacity: d.type === 'screen' ? d.settings.dim : 0}}),
+    h('div', {class: 'pv-board', id: 'pvBoard'}), h('div', {class: 'pv-title', id: 'pvTitle'}), h('div', {class: 'pv-fade', id: 'pvFade'}),
+    h('div', {class: 'chat', id: 'pvChat'}), h('div', {class: 'hotbar', id: 'pvHotbar'}), h('div', {class: 'xhair', id: 'pvX'}),
+    h('div', {class: 'pv-bar'}, h('b', {}, 'Preview'), h('span', {class: 'lab'}, d.type === 'hud' ? 'HUD at the top of the screen' : 'Aim and click. WASD, Space, Shift, Q, F, 1-9 and scroll fire key events.'),
+      h('button', {class: 'btn sm', onclick: stopPreview}, 'Exit (Esc)')));
+  pvChat('<gray>Preview started. Messages and commands show here.</gray>');
+  pvRun('on_open');
+  PV.raf = requestAnimationFrame(pvFrame);
+}
+function stopPreview() {
+  if (!PV) return;
+  if (!PV.closed) pvRun('on_close');
+  cancelAnimationFrame(PV.raf);
+  PV = null;
+  pvEl.hidden = true;
+  pvEl.replaceChildren();
+}
+function pvLayout() {
+  const r = pvEl.getBoundingClientRect(), d = PV.d;
+  if (d.type === 'hud') { const z = Math.max(1, Math.floor(r.width / 480 * 2) / 2); return {z, x: r.width / 2 - d.canvas.width / 2 * z, y: 0}; }
+  const z = Math.min((r.width - 60) / d.canvas.width, (r.height - 110) / d.canvas.height) * (d.type === 'screen' ? d.settings.screenSize || 1 : 1);
+  return {z, x: (r.width - d.canvas.width * z) / 2, y: (r.height - d.canvas.height * z) / 2};
+}
+function pvFrame(now) {
+  if (!PV) return;
+  const dt = Math.min(250, now - PV.last); PV.last = now;
+  PV.acc += dt;
+  while (PV.acc >= 50) { PV.acc -= 50; pvTick(); if (!PV) return; }
+  // animations sample continuously for smooth frames
+  for (const a of PV.anims) pvApply(a, Math.min(a.def.length, a.t + PV.acc / 50));
+  const L = pvLayout(), b = $('#pvBoard');
+  b.style.transform = `translate(${L.x}px,${L.y}px) scale(${L.z})`;
+  b.style.width = PV.d.canvas.width + 'px'; b.style.height = PV.d.canvas.height + 'px';
+  b.replaceChildren(...PV.d.elements.map(e => elNode(e, PV.states[e.id], {preview: true, hover: PV.hover === e.id, vars: PV.vars})));
+  $('#pvChat').replaceChildren(...PV.chat.slice(-8).map(c => h('div', {html: c})));
+  $('#pvHotbar').replaceChildren(...Array.from({length: 9}, (_, i) => h('i', {class: i === PV.slot ? 'on' : ''})));
+  const t = $('#pvTitle'); t.innerHTML = PV.title && now < PV.title.until ? PV.title.html : '';
+  const f = $('#pvFade'); if (PV.fade) { const p = now - PV.fade.start, {i, s, o} = PV.fade; f.style.background = PV.fade.color; f.style.opacity = p < i ? p / i : p < i + s ? 1 : p < i + s + o ? 1 - (p - i - s) / o : 0; if (p > i + s + o) PV.fade = null; }
+  PV.raf = requestAnimationFrame(pvFrame);
+}
+function pvTick() {
+  PV.ticks++;
+  for (const a of [...PV.anims]) {
+    a.t++;
+    if (a.t > a.def.length) {
+      pvApply(a, a.def.length);
+      if (a.def.loop) a.t = 0; else PV.anims.splice(PV.anims.indexOf(a), 1);
+    }
+  }
+  for (const n of PV.d.script.nodes) if (n.type === 'on_timer') {
+    const iv = Math.max(1, Math.round((+n.props.seconds || 1) * 20));
+    if (PV.ticks % iv === 0) pvChain(n.next?.then || [], {});
+  }
+}
+function pvPlay(name) {
+  const a = PV.d.animations.find(x => x.name === name || x.id === name);
+  if (!a) return;
+  PV.anims = PV.anims.filter(x => x.def !== a);
+  const ent = {def: a, t: 0};
+  PV.anims.push(ent);
+  pvApply(ent, 0);
+}
+function pvApply(a, t) {
+  for (const tr of a.def.tracks) { const s = PV.states[tr.element]; if (s && tr.keys.length) s[tr.property] = sampleKeys(tr.keys, t); }
+}
+function pvChat(html) { if (PV) PV.chat.push(mmToHtml(html)); }
+function pvRun(type, filter = () => true, extra = {}) {
+  if (!PV) return;
+  for (const n of PV.d.script.nodes) if (n.type === type && filter(n)) pvChain(n.next?.then || [], extra);
+}
+function pvChain(ids, extra, depth = 0) {
+  const queue = [...ids];
+  let steps = 0;
+  while (queue.length && PV && steps++ < 512) {
+    const n = PV.d.script.nodes.find(x => x.id === queue.shift());
+    if (!n) continue;
+    if (n.type === 'wait') { const rest = [...(n.next?.then || []), ...queue]; setTimeout(() => PV && pvChain(rest, extra), (+n.props.ticks || 20) * 50); return; }
+    const port = pvExec(n, extra);
+    if (port) queue.push(...(n.next?.[port] || []));
+  }
+}
+function pvRes(s, extra) { let o = resolve(s, PV.vars); for (const [k, v] of Object.entries(extra)) o = o.split('{' + k + '}').join(v); return o; }
+function pvCompare(a, op, b) {
+  const na = parseFloat(a), nb = parseFloat(b), num = !isNaN(na) && !isNaN(nb);
+  switch (op) { case '!=': return num ? na !== nb : a !== b; case '>': return num && na > nb; case '>=': return num && na >= nb; case '<': return num && na < nb; case '<=': return num && na <= nb;
+    case 'contains': return String(a).toLowerCase().includes(String(b).toLowerCase()); default: return num ? na === nb : String(a).toLowerCase() === String(b).toLowerCase(); }
+}
+function pvExec(n, x) {
+  const p = n.props, st = PV.states[p.element];
+  switch (n.type) {
+    case 'show': if (st) st.visible = true; break;
+    case 'hide': if (st) st.visible = false; break;
+    case 'toggle': if (st) st.visible = !st.visible; break;
+    case 'set_text': if (st) st.text = PV.d.type === 'world' ? pvRes(p.text || '', x) : (p.text || ''); break;
+    case 'set_color': if (st) { if (st.type === 'text') st.textColor = p.color; else st.fill = p.color; } break;
+    case 'set_text_color': if (st) st.textColor = p.color; break;
+    case 'set_sprite': if (st) st.sprite = p.sprite || ''; break;
+    case 'set_progress': if (st) { st.value = p.value || '0'; if (p.max) st.max = p.max; } break;
+    case 'move': if (st) { st.x = +pvRes(p.x ?? st.x, x) || st.x; st.y = +pvRes(p.y ?? st.y, x) || st.y; } break;
+    case 'play_animation': pvPlay(p.animation); break;
+    case 'stop_animation': PV.anims = PV.anims.filter(a => a.def.name !== p.animation && a.def.id !== p.animation); break;
+    case 'open_ui': {
+      const i = S.docs.findIndex(dd => dd.id === p.ui);
+      pvChat(`<gray>Open UI</gray> <#ff8fd1>${p.ui}</#ff8fd1>` + (i < 0 ? ' <dark_gray>(not open in a tab)</dark_gray>' : ''));
+      if (i >= 0) { setTimeout(() => { stopPreview(); switchTab(i); startPreview(); }, 0); }
+      break;
+    }
+    case 'close_ui': if (PV.d.type === 'screen') { setTimeout(stopPreview, 0); } break;
+    case 'focus_input': pvAsk(p.element); break;
+    case 'run_command': pvChat(`<dark_gray>${p.as === 'console' ? 'console' : 'Silent'} runs</dark_gray> <white>/${pvRes(p.command || '', x).replace(/^\//, '')}</white>`); break;
+    case 'message': case 'broadcast': pvChat(pvRes(p.text || '', x)); break;
+    case 'actionbar': pvChat('<gray>[action bar]</gray> ' + pvRes(p.text || '', x)); break;
+    case 'title': PV.title = {html: mmToHtml(pvRes(p.title || '', x)) + '<div style="font-size:20px;font-weight:400">' + mmToHtml(pvRes(p.subtitle || '', x)) + '</div>', until: performance.now() + ((+p.in || 0) + (+p.stay || 40) + (+p.out || 0)) * 50}; break;
+    case 'sound': pvChat(`<dark_gray>♪ ${p.sound}</dark_gray>`); break;
+    case 'screen_fade': PV.fade = {color: p.color || '#000', i: (+p.in || 0) * 50, s: (+p.stay || 0) * 50, o: (+p.out || 0) * 50, start: performance.now()}; break;
+    case 'set_var': PV.vars[p.name || 'var'] = pvRes(p.value ?? '', x); break;
+    case 'add_var': { const k = p.name || 'var'; const v = (parseFloat(PV.vars[k]) || 0) + (parseFloat(pvRes(p.amount ?? '1', x)) || 0); PV.vars[k] = String(Math.round(v * 1000) / 1000); break; }
+    case 'if_var': return pvCompare(PV.vars[p.name || 'var'] ?? '', p.op || '==', pvRes(p.value ?? '', x)) ? 'true' : 'false';
+    case 'if_compare': return pvCompare(pvRes(p.left ?? '', x), p.op || '==', pvRes(p.right ?? '', x)) ? 'true' : 'false';
+    case 'if_permission': return 'true';
+    case 'random': return Math.random() * 100 < (+p.chance || 50) ? 'true' : 'false';
+  }
+  return 'then';
+}
+function pvAsk(id) {
+  const st = PV.states[id]; if (!st) return;
+  pvChat('<#ff8fd1>✎</#ff8fd1> <gray>Type your text and press Enter.</gray>');
+  const inp = h('input', {class: 'inp', style: {position: 'absolute', left: '12px', right: '12px', bottom: '8px', zIndex: 6, maxWidth: '520px'}, placeholder: 'Type in chat…'});
+  pvEl.append(inp); inp.focus();
+  inp.addEventListener('keydown', ev => {
+    ev.stopPropagation();
+    if (ev.key === 'Enter') {
+      const text = inp.value.replace(/[<>\\{}%&]/g, '').trim().slice(0, 96); inp.remove();
+      if (!text || text.toLowerCase() === 'cancel') return;
+      st.text = text; PV.vars['input_' + id] = text;
+      pvRun('on_text', n => !n.props.element || n.props.element === id, {text});
+    }
+    if (ev.key === 'Escape') inp.remove();
+  });
+}
+function pvHit(ev) {
+  const r = pvEl.getBoundingClientRect(), L = pvLayout();
+  const p = {x: (ev.clientX - r.left - L.x) / L.z, y: (ev.clientY - r.top - L.y) / L.z};
+  for (let i = PV.d.elements.length - 1; i >= 0; i--) {
+    const e = PV.d.elements[i], s = PV.states[e.id];
+    if (!s.visible || s.blocked || s.opacity <= 0.01) continue;
+    const pv = pivotOf(s, e.anchor), sc = (s.scale || 1) * (PV.hover === e.id ? e.hoverScale || 1 : 1);
+    let dx = p.x - pv[0], dy = p.y - pv[1];
+    if (s.rotation) { const rr = -s.rotation * Math.PI / 180, c = Math.cos(rr), sn = Math.sin(rr); [dx, dy] = [dx * c - dy * sn, dx * sn + dy * c]; }
+    const lx = pv[0] + dx / sc, ly = pv[1] + dy / sc;
+    if (lx >= s.x && lx <= s.x + s.w && ly >= s.y && ly <= s.y + s.h) return e.id;
+  }
+  return null;
+}
+pvEl.addEventListener('pointermove', ev => {
+  if (!PV) return;
+  const r = pvEl.getBoundingClientRect(), x = $('#pvX');
+  if (x) { x.style.left = (ev.clientX - r.left) + 'px'; x.style.top = (ev.clientY - r.top) + 'px'; }
+  if (PV.d.type === 'hud') return;
+  const id = pvHit(ev);
+  if (id !== PV.hover) {
+    const old = PV.hover; PV.hover = id;
+    if (old) pvRun('on_hover_leave', n => !n.props.element || n.props.element === old);
+    if (id) pvRun('on_hover_enter', n => !n.props.element || n.props.element === id);
+  }
+});
+const pvClick = (ev, button) => {
+  if (!PV || ev.target.closest('.pv-bar,input')) return;
+  ev.preventDefault();
+  const id = PV.d.type === 'hud' ? null : pvHit(ev);
+  if (!id) return;
+  pvRun('on_click', n => (!n.props.element || n.props.element === id) && (!n.props.button || n.props.button === 'any' || n.props.button === button), {element: id, button});
+  if (PV && PV.states[id]?.type === 'input') pvAsk(id);
+};
+pvEl.addEventListener('click', ev => pvClick(ev, 'left'));
+pvEl.addEventListener('contextmenu', ev => pvClick(ev, 'right'));
+pvEl.addEventListener('wheel', ev => {
+  if (!PV) return; ev.preventDefault();
+  PV.slot = (PV.slot + (ev.deltaY > 0 ? 1 : 8)) % 9;
+  pvKey(ev.deltaY > 0 ? 'SCROLL_DOWN' : 'SCROLL_UP');
+}, {passive: false});
+function pvKey(key) {
+  if (!PV) return;
+  pvRun('on_key', n => !n.props.key || n.props.key === 'any' || n.props.key === key, {key});
+  if (key === 'SNEAK' && PV && PV.d.type === 'screen' && PV.d.settings.closeOnSneak) stopPreview();
+}
+
+/* ============================================================== keyboard */
+document.addEventListener('keydown', ev => {
+  const typing = ev.target.closest('input,textarea,select,[contenteditable]');
+  if (PV) {
+    if (typing) return;
+    if (ev.key === 'Escape') return stopPreview();
+    const map = {w: 'W', a: 'A', s: 'S', d: 'D', ' ': 'JUMP', shift: 'SNEAK', control: 'SPRINT', q: 'DROP', f: 'SWAP'};
+    const k = map[ev.key.toLowerCase()];
+    if (/^[1-9]$/.test(ev.key)) { PV.slot = +ev.key - 1; pvKey('SLOT_' + ev.key); }
+    else if (k && !ev.repeat) { ev.preventDefault(); pvKey(k); }
+    return;
+  }
+  if (typing) return;
+  const mod = ev.ctrlKey || ev.metaKey, k = ev.key.toLowerCase();
+  if (k === ' ' && !S.scriptOpen) { if (S.dock && document.activeElement?.closest?.('#dock')) { ev.preventDefault(); togglePlay(); return; } S.spaceDown = true; stage.style.cursor = 'grab'; ev.preventDefault(); return; }
+  if (mod && k === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
+  if (mod && k === 'y') { ev.preventDefault(); redo(); return; }
+  if (mod && k === 'c') { copySel(); return; }
+  if (mod && k === 'v') { paste(); return; }
+  if (mod && k === 'd') { ev.preventDefault(); duplicate(); return; }
+  if (mod && k === 'a') { ev.preventDefault(); S.sel = els().filter(e => !e.locked).map(e => e.id); render(); return; }
+  if (mod && k === 'e') { ev.preventDefault(); openExport(); return; }
+  if (mod && k === 'o') { ev.preventDefault(); $('#fileOpen').click(); return; }
+  if (mod && k === 's') { ev.preventDefault(); saveLocal(); toast('Saved in this browser', 'ok'); return; }
+  if (mod && k === 'h') { ev.preventDefault(); mutate(() => selected().forEach(e => e.visible = !e.visible)); return; }
+  if (mod && k === 'l') { ev.preventDefault(); mutate(() => selected().forEach(e => e.locked = !e.locked)); return; }
+  if (mod) return;
+  if (S.scriptOpen) {
+    if ((k === 'delete' || k === 'backspace') && SC.sel) { deleteNode(SC.sel); SC.sel = null; }
+    if (k === 'escape' || k === 'k') toggleScript();
+    return;
+  }
+  if (k === 'delete' || k === 'backspace') { removeSel(); return; }
+  if (k === 'escape') { S.sel = []; setTool('select'); render(); return; }
+  if (k.startsWith('arrow')) { ev.preventDefault(); const s = ev.shiftKey ? 10 : 1; nudge(k === 'arrowleft' ? -s : k === 'arrowright' ? s : 0, k === 'arrowup' ? -s : k === 'arrowdown' ? s : 0); return; }
+  if (ev.key === '!' || (ev.shiftKey && k === '1')) { fit(); return; }
+  const tools = {v: 'select', r: 'rect', t: 'text', b: 'button', i: 'image', n: 'input', g: 'progress', e: 'item', h: 'head'};
+  if (tools[k]) { setTool(tools[k]); return; }
+  if (k === 'a') toggleDock();
+  if (k === 'k') toggleScript();
+  if (k === 'p') startPreview();
+  if (k === '?') openHelp();
+  if (k === ']') arrange('top');
+  if (k === '[') arrange('bottom');
+});
+document.addEventListener('keyup', ev => { if (ev.key === ' ') { S.spaceDown = false; stage.style.cursor = S.tool === 'select' ? '' : 'crosshair'; } });
+
+/* ============================================================== render + boot */
+function render(opts = {}) {
+  renderTabs();
+  renderRail();
+  renderCanvas();
+  renderPanel();
+  renderTimeline();
+  if (opts.keepScript && S.scriptOpen && $('#nodeLayer')) renderNodes(); else renderScript();
+  renderStatus();
+}
+$('#undoBtn').addEventListener('click', undo);
+$('#redoBtn').addEventListener('click', redo);
+$('#exportBtn').addEventListener('click', openExport);
+$('#pushBtn').addEventListener('click', openPush);
+$('#previewBtn').addEventListener('click', startPreview);
+$('#zoomIn').addEventListener('click', () => zoomAt(1.25));
+$('#zoomOut').addEventListener('click', () => zoomAt(0.8));
+$('#zoomFit').addEventListener('click', fit);
+window.addEventListener('resize', () => renderCanvas());
+renderMenus();
+(function boot() {
+  const saved = store.get('docs', null);
+  if (saved && Array.isArray(saved.docs) && saved.docs.length) {
+    S.docs = saved.docs.map(normalize);
+    S.cur = clamp(saved.cur || 0, 0, S.docs.length - 1);
+  } else {
+    S.docs = [tplMenu(), tplHud(), tplBoard()].map(normalize);
+    S.cur = 0;
+  }
+  S.anim.id = doc().animations[0]?.id || null;
+  render();
+  requestAnimationFrame(fit);
+})();
+window.SilentUIEditor = {S, doc, exportJson, tplMenu, tplHud, tplBoard, normalize, validate};
+</script>

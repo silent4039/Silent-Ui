@@ -1,0 +1,441 @@
+{
+  "format": 1,
+  "id": "example_board",
+  "name": "Welcome Board",
+  "type": "world",
+  "canvas": {
+    "width": 320,
+    "height": 180
+  },
+  "settings": {
+    "command": "",
+    "permission": "",
+    "freeze": true,
+    "closeOnSneak": true,
+    "clampCursor": true,
+    "dim": 0,
+    "cursorSprite": "",
+    "screenSize": 1,
+    "autoShow": false,
+    "worldScale": 1.2
+  },
+  "sprites": [
+    {
+      "id": "board",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAKAAAABaCAYAAAA/xl1SAAAD6UlEQVR4Aeyd4XETMRBGL6kEKqAcaIMK4D/MUA90QR9Qg/l2Jfk8mTDx6Hy7Ot1jJCKc2Kt7ersnORnyvLz4c/nx+0KHwV4OvNBtuQrYAr7//mmhw2AvB5pnTUQX0B5sAdsn+AiBPQg0z8w5e30X0AbLctEHOhyiHJBuas9m4rtvH5eL4tKlHxxCXHDndN64qYDSkQaBYALnFTAYNOFeJ4CAr3Ph0SACVUBtfDiECDkctAsO5LCs7wMqKg0C4QS8ApL3sXkP78LbbHcBbUCHQAaBIiApWVLyHBzGuVYZXwTkACIU2BdvJocQiUfLJFArYOYUiH1mAi4gN5/4mw/MS9q5gGXI3xCIJ1AFJB+pgRkOtENIUGwO26owsF5zXThqBdSIBoEEAgiYAJ2QKwEEXFkwSiDgAl60OaNDIJqA+e4C2oAOgQwCCBhCnSD/I1AE5K2B9a0BWMSxkJVFQA1oEMggUAUk7ePSHtYr6/qdEJCsSGARx8Iqbq2ANqRDIJ4AAsYzP1XEty4WAd8ixOd3JVAFZOcTt/OB9cq6HkL0nbj1MfjAIsoB1VavgFHxiIPbtw7IP/5rDoNAzyPgFTAvPJHPTqAKeFsYJxmzsZXbo69lO4RoqjQIZBCoFTAjNDEh0Crg6JWa+c15fFYGegVkfedc39HXVf61t2FGnyrzmzNF2i3YVKTPQuBQ1+G34EPNmMlORQABp1rO411MFZA91px7rNHXte4BR58m85szPaxelwrICs+5wqOvqwwsAmpAg0AGgYcKmHEBxDw2gSrg6LWa+c25R6iHkGPnELM/MoFaAY98Ccz9yARcQG5wc97gRl9XSxwXkB8eForRV2vG+Ql7ERADhWLLCvPcvnsIhxCJR8skUCtg5hSIfWYCCHjm1R/g2l1AdjB9Oxi4beNm/ruA216GZYBfrwMcQiwJ6RsIbH1qqYC9AvM8it8WB2RvEVADGgQyCCBgBnViXgm4gNG/I4x4EDACZqELaAM6BDIIIGAGdWJeCRxXwOslMDgygSLglqM0z+WtmF4HlDlFQH4cSyh6KfK8/gzkOyESj5ZJwCsgOdyfw7DrZ2fiu4A2oEMggwACZlDfFnOqZ1cBuZH030hg18+uHUJg2M8Qdv3sVMtrBdSIBoEEAi4gSdyfxLDrZ2e+u4A2oEMgg0AVkDzuz2PY9bNrh5A71efLIPBoArUCPvpleT0I3EcAAe/jxFftROD56fOHpz9ffi4XbWXo2s3AIcQFc87cu6mAIs+PZSnP4aA0DOCgEGouoJn49+uvxboeo0FgNwLmmHVzzoK4gDawB6zbJ+klGVcO/PtRLMwx6+ac9X8AAAD//8aj/IMAAAAGSURBVAMAiDwYVrPthdYAAAAASUVORK5CYII=",
+      "width": 160,
+      "height": 90
+    },
+    {
+      "id": "btn",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAUCAYAAAA9djs/AAAAfUlEQVR4AeySwQlAIQxD1YX+bH8SZ3MiJYJQvJhzGqFQaS4vSSvhzT5mhgnIZRtwoONBeY+82wBl2Bdbgxsvkeod7G6AaroslxvAOqWqcwNUk2W53ADWKVWdG6CaLMvlBrBOqehuDjeg/l+9XcnyB7sbgLThBAZ7hgErBqwLAAD//yGfTEAAAAAGSURBVAMA9tHbdduH5HUAAAAASUVORK5CYII=",
+      "width": 64,
+      "height": 20
+    },
+    {
+      "id": "btn_hover",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAUCAYAAAA9djs/AAAAfUlEQVR4AeySwQlAIQxD1TH+Mn92l3ENJYJQvJhzGqFQaS4vSSvhzT5mhgnIZRtwoONBeY+82wBl2Bdbgxsvkeod7G6AaroslxvAOqWqcwNUk2W53ADWKVWdG6CaLMvlBrBOqehuDjeg/l+9XcnyB7sbgLThBAZ7hgErBqwLAAD//4F9HgUAAAAGSURBVAMAzJzri7kQC8sAAAAASUVORK5CYII=",
+      "width": 64,
+      "height": 20
+    },
+    {
+      "id": "star",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAeUlEQVR4AcyQ0QmAMAwFowM5oAM4oAtV7+OglBTB+CH0eCRNX5KuEdEy2rm3nqyGHAa3vj8/MLj3jIxxqayGXH2FZTsCxo5PMW+gPoGdcAPjmVID3n83AT8KOtOlxzw1YFyfADfQ0a7G6pjnDdQn0Fm140ytU8sTXAAAAP//Msp0RwAAAAZJREFUAwBUW1gRijbFZAAAAABJRU5ErkJggg==",
+      "width": 16,
+      "height": 16
+    }
+  ],
+  "elements": [
+    {
+      "id": "bg",
+      "name": "Board",
+      "type": "image",
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 180,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#2a2633",
+      "fillEnabled": false,
+      "sprite": "board",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "star",
+      "name": "Star",
+      "type": "image",
+      "x": 152,
+      "y": 18,
+      "w": 16,
+      "h": 16,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#2a2633",
+      "fillEnabled": false,
+      "sprite": "star",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "title",
+      "name": "Title",
+      "type": "text",
+      "x": 20,
+      "y": 40,
+      "w": 280,
+      "h": 22,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#2a2633",
+      "fillEnabled": false,
+      "sprite": "",
+      "text": "<bold>Welcome!</bold>",
+      "textColor": "#ffffff",
+      "textSize": 2,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "sub",
+      "name": "Subtitle",
+      "type": "text",
+      "x": 20,
+      "y": 70,
+      "w": 280,
+      "h": 12,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#2a2633",
+      "fillEnabled": false,
+      "sprite": "",
+      "text": "<gray>Look at a button and click it</gray>",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "b_rules",
+      "name": "Rules",
+      "type": "button",
+      "x": 40,
+      "y": 110,
+      "w": 70,
+      "h": 22,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": false,
+      "anchor": "center",
+      "fill": "#ff8fd1",
+      "fillEnabled": false,
+      "sprite": "btn",
+      "text": "Rules",
+      "textColor": "#2a0d1f",
+      "textSize": 1,
+      "align": "center",
+      "shadow": false,
+      "hoverFill": "#ffb6e2",
+      "hoverSprite": "btn_hover",
+      "hoverTextColor": "",
+      "hoverScale": 1.05,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "b_spawn",
+      "name": "Spawn",
+      "type": "button",
+      "x": 125,
+      "y": 110,
+      "w": 70,
+      "h": 22,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": false,
+      "anchor": "center",
+      "fill": "#ff8fd1",
+      "fillEnabled": false,
+      "sprite": "btn",
+      "text": "Spawn",
+      "textColor": "#2a0d1f",
+      "textSize": 1,
+      "align": "center",
+      "shadow": false,
+      "hoverFill": "#ffb6e2",
+      "hoverSprite": "btn_hover",
+      "hoverTextColor": "",
+      "hoverScale": 1.05,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "b_hi",
+      "name": "Wave",
+      "type": "button",
+      "x": 210,
+      "y": 110,
+      "w": 70,
+      "h": 22,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": false,
+      "anchor": "center",
+      "fill": "#ff8fd1",
+      "fillEnabled": false,
+      "sprite": "btn",
+      "text": "Wave",
+      "textColor": "#2a0d1f",
+      "textSize": 1,
+      "align": "center",
+      "shadow": false,
+      "hoverFill": "#ffb6e2",
+      "hoverSprite": "btn_hover",
+      "hoverTextColor": "",
+      "hoverScale": 1.05,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    },
+    {
+      "id": "last",
+      "name": "Last action",
+      "type": "text",
+      "x": 20,
+      "y": 148,
+      "w": 280,
+      "h": 10,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#2a2633",
+      "fillEnabled": false,
+      "sprite": "",
+      "text": "<dark_gray>Nobody has clicked yet</dark_gray>",
+      "textColor": "#ffffff",
+      "textSize": 0.8,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ff8fd1",
+      "barSprite": "",
+      "placeholder": "Type..."
+    }
+  ],
+  "animations": [
+    {
+      "id": "spin",
+      "name": "spin",
+      "length": 40,
+      "loop": true,
+      "autoplay": true,
+      "tracks": [
+        {
+          "element": "star",
+          "property": "rotation",
+          "keys": [
+            {
+              "t": 0,
+              "v": 0,
+              "ease": "linear"
+            },
+            {
+              "t": 40,
+              "v": 360,
+              "ease": "linear"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "script": {
+    "nodes": [
+      {
+        "props": {
+          "element": "b_rules"
+        },
+        "next": {
+          "then": [
+            "w2"
+          ]
+        },
+        "id": "w1",
+        "type": "on_click",
+        "x": 40,
+        "y": 40
+      },
+      {
+        "props": {
+          "text": "<#ff8fd1>Rules:</#ff8fd1> be kind, no griefing, have fun."
+        },
+        "next": {},
+        "id": "w2",
+        "type": "message",
+        "x": 320,
+        "y": 40
+      },
+      {
+        "props": {
+          "element": "b_spawn"
+        },
+        "next": {
+          "then": [
+            "w4"
+          ]
+        },
+        "id": "w3",
+        "type": "on_click",
+        "x": 40,
+        "y": 220
+      },
+      {
+        "props": {
+          "command": "spawn",
+          "as": "player"
+        },
+        "next": {},
+        "id": "w4",
+        "type": "run_command",
+        "x": 320,
+        "y": 220
+      },
+      {
+        "props": {
+          "element": "b_hi"
+        },
+        "next": {
+          "then": [
+            "w6"
+          ]
+        },
+        "id": "w5",
+        "type": "on_click",
+        "x": 40,
+        "y": 400
+      },
+      {
+        "props": {
+          "element": "last",
+          "text": "<gray>{player} waved hello!</gray>"
+        },
+        "next": {
+          "then": [
+            "w7"
+          ]
+        },
+        "id": "w6",
+        "type": "set_text",
+        "x": 320,
+        "y": 400
+      },
+      {
+        "props": {
+          "animation": "spin"
+        },
+        "next": {},
+        "id": "w7",
+        "type": "play_animation",
+        "x": 600,
+        "y": 400
+      }
+    ]
+  }
+}

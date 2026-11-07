@@ -119,7 +119,9 @@ public final class ScriptRunner {
             }
             case "set_text" -> {
                 if (st != null) {
-                    st.text = n.prop("text", "");
+                    // World UIs are shared by everyone, so placeholders resolve now (for the clicking player).
+                    // Screens and HUDs keep the raw text so placeholders stay live.
+                    st.text = ui.def().isWorld() ? p(ui, player, n, "text", "", x) : n.prop("text", "");
                     ui.refresh(el, 0);
                 }
             }
