@@ -44,6 +44,7 @@ public final class HudInstance implements UiInstance {
         for (ElementDef e : def.elements) states.put(e.id, new ElementState(e));
         this.yValues = HudLayout.yValues(def);
         this.animations = new AnimationPlayer(def, states, (id, t) -> dirty = true, false);
+        applyDefaultTabs();
         animations.autoplay();
     }
 
@@ -74,7 +75,7 @@ public final class HudInstance implements UiInstance {
             int w = HudLayout.round(s.w), h = HudLayout.round(s.h);
             int y = HudLayout.nearest(yValues.get(e.id), HudLayout.round(s.y));
             switch (e.type) {
-                case "item", "head" -> { }
+                case "item", "head", "model" -> { }
                 case "progress" -> {
                     if (e.fillEnabled) glyph(out, g, e.sprite, s.fill, x, w, h, y);
                     double v = Text.num(Text.apply(s.value, player, vars), 0);
@@ -167,6 +168,11 @@ public final class HudInstance implements UiInstance {
     @Override
     public ElementState state(String elementId) {
         return states.get(elementId);
+    }
+
+    @Override
+    public java.util.Collection<ElementState> states() {
+        return states.values();
     }
 
     @Override

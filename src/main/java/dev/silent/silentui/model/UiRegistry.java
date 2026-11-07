@@ -79,6 +79,16 @@ public final class UiRegistry {
         return Collections.unmodifiableCollection(uis.values());
     }
 
+    /** Deep copy (used by the in-game editor's working copy and undo). */
+    public static UiDefinition copy(UiDefinition def) {
+        return GSON.fromJson(GSON.toJson(def), UiDefinition.class);
+    }
+
+    /** Validates and cleans a definition that did not come from disk. Returns an error or null. */
+    public static String check(UiDefinition def) {
+        return sanitize(def, def.id == null ? "ui" : def.id);
+    }
+
     public static String cleanId(String raw) {
         if (raw == null) return "";
         String s = raw.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_]+", "_").replaceAll("^_+|_+$", "");
@@ -99,6 +109,15 @@ public final class UiRegistry {
         if (def.animations == null) def.animations = new java.util.ArrayList<>();
         if (def.script == null) def.script = new UiDefinition.ScriptDef();
         if (def.script.nodes == null) def.script.nodes = new java.util.ArrayList<>();
+        if (def.tabs == null) def.tabs = new java.util.LinkedHashMap<>();
+        if (def.commands == null) def.commands = new java.util.ArrayList<>();
+        def.commands.removeIf(c -> c == null || c.name == null || c.name.isBlank());
+        for (UiDefinition.CommandDef c : def.commands) {
+            c.name = c.name.trim().toLowerCase(Locale.ROOT).replaceFirst("^/+", "").replaceAll("[^a-z0-9_\\-]", "");
+            if (c.aliases == null) c.aliases = new java.util.ArrayList<>();
+            if (c.args == null) c.args = new java.util.ArrayList<>();
+            for (UiDefinition.ArgDef a : c.args) if (a.choices == null) a.choices = new java.util.ArrayList<>();
+        }
 
         Set<String> spriteIds = new HashSet<>();
         def.sprites.removeIf(s -> s == null || s.id == null || s.data == null || s.data.isEmpty());
@@ -114,6 +133,21 @@ public final class UiRegistry {
             if (!ids.add(e.id)) return "duplicate element id " + e.id;
             if (e.type == null) e.type = "rect";
             e.type = e.type.toLowerCase(Locale.ROOT);
+            if (e.group == null) e.group = "";
+            if (e.tabFor == null) e.tabFor = "";
+            if (e.activeFill == null) e.activeFill = "";
+            if (e.activeSprite == null) e.activeSprite = "";
+            if (e.activeTextColor == null) e.activeTextColor = "";
+            if (e.itemModel == null) e.itemModel = "";
+            if (e.sprite == null) e.sprite = "";
+            if (e.text == null) e.text = "";
+            if (e.hoverFill == null) e.hoverFill = "";
+            if (e.hoverSprite == null) e.hoverSprite = "";
+            if (e.hoverTextColor == null) e.hoverTextColor = "";
+            if (e.barSprite == null) e.barSprite = "";
+            if (e.headOwner == null) e.headOwner = "";
+            if (e.anchor == null) e.anchor = "center";
+            if (e.align == null) e.align = "center";
             e.w = Math.max(1, e.w);
             e.h = Math.max(1, e.h);
             if (e.textSize <= 0) e.textSize = 1;

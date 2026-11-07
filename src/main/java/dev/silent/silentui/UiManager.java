@@ -52,18 +52,66 @@ public final class UiManager {
         return screens.get(p.getUniqueId());
     }
 
+    private final Map<String, dev.silent.silentui.script.LogicInstance> logic = new HashMap<>();
+
+    /** The running instance of a UI for this player (open screen, shown HUD, placed world UI) or a logic runtime. */
+    public UiInstance instanceFor(Player p, String id) {
+        UiDefinition def = plugin.registry().get(id);
+        if (def == null) return null;
+        if (p != null) {
+            ScreenSession s = screen(p);
+            if (s != null && s.def().id.equals(def.id)) return s;
+            UiInstance h = plugin.hud().instance(p, def.id);
+            if (h != null) return h;
+        }
+        for (WorldUi w : worlds.values()) if (w.def().id.equals(def.id) && w.isActive()) return w;
+        return logic.computeIfAbsent(def.id, k -> new dev.silent.silentui.script.LogicInstance(def));
+    }
+
+    public void clearLogic() {
+        logic.clear();
+    }
+
+    // ------------------------------------------------------------------ in-game editor
+
+    public void startEditing(Player p, UiDefinition def) {
+        new dev.silent.silentui.render.EditController(plugin, p, def).open();
+        p.sendMessage(Text.mm("<white><bold>Silent UI editor</bold></white> <gray>· click to select · click again to move · right click for properties"));
+        p.sendMessage(Text.mm("<gray>WASD nudge · scroll resize · Space pick up/drop · Q delete · F duplicate · Shift deselect/exit"));
+    }
+
+    public void stopEditing(Player p) {
+        ScreenSession s = screen(p);
+        if (s != null && s.editor() != null) closeScreen(p);
+        p.sendActionBar(net.kyori.adventure.text.Component.empty());
+    }
+
+    public dev.silent.silentui.render.EditController editor(Player p) {
+        ScreenSession s = screen(p);
+        return s == null ? null : s.editor();
+    }
+
+    /** Saving reloads everything (pack, commands); the editor then reopens where it was. */
+    public void reloadAfterEditorSave(dev.silent.silentui.render.EditController ctrl) {
+        plugin.reloadAll();
+        if (ctrl.player().isOnline()) ctrl.open();
+    }
+
     public boolean openAny(Player p, String id) {
         UiDefinition def = plugin.registry().get(id);
         if (def == null) return false;
         if (def.isHud()) return plugin.hud().show(p, def.id);
-        if (def.isWorld()) return false;
+        if (def.isWorld() || def.isLogic()) return false;
         openScreen(p, def);
         return true;
     }
 
     public ScreenSession openScreen(Player p, UiDefinition def) {
+        return openSession(p, new ScreenSession(plugin, def, p));
+    }
+
+    public ScreenSession openSession(Player p, ScreenSession s) {
         closeScreen(p);
-        ScreenSession s = new ScreenSession(plugin, def, p);
         screens.put(p.getUniqueId(), s);
         s.spawn();
         if (s.hitbox() != null) hitboxes.put(s.hitbox().getUniqueId(), s);
@@ -118,6 +166,10 @@ public final class UiManager {
         lastClick.put(p.getUniqueId(), now);
         if (ui instanceof ScreenSession s) {
             if (s.player() != p || s.inClickGrace()) return true;
+            if (s.editor() != null) {
+                s.editor().click(left);
+                return true;
+            }
             ui.click(p, left, s.cursor());
         } else if (ui instanceof WorldUi w) {
             ui.click(p, left, w.cursorFor(p));
@@ -129,6 +181,11 @@ public final class UiManager {
     public void key(Player p, String key) {
         ScreenSession s = screen(p);
         if (s == null) return;
+        if (s.editor() != null) {
+            s.editor().key(key);
+            return;
+        }
+        if (key.startsWith("SCROLL_") && s.scrollRotate(p, key.equals("SCROLL_UP") ? 1 : -1)) return;
         plugin.scripts().fire(s, p, "on_key", n -> {
             String k = n.prop("key", "any");
             return "any".equalsIgnoreCase(k) || k.equalsIgnoreCase(key);
@@ -137,6 +194,18 @@ public final class UiManager {
     }
 
     public void beginInput(Player p, UiInstance ui, String elementId) {
+        dev.silent.silentui.render.ElementState st = ui.state(elementId);
+        String current = st == null || st.text == null ? "" : st.text;
+        String label = st == null || st.def.placeholder.isEmpty() ? "Text" : st.def.placeholder;
+        dev.silent.silentui.util.Dialogs.Form form = new dev.silent.silentui.util.Dialogs.Form("<white>" + label)
+                .text("value", label, current, 96).saveLabel("Done");
+        boolean shown = dev.silent.silentui.util.Dialogs.show(plugin, p, form, values -> {
+            if (!ui.isActive()) return;
+            String clean = sanitize(values.getOrDefault("value", ""));
+            if (ui instanceof PlaneUi plane) plane.submitInput(p, elementId, clean);
+            else if (ui instanceof HudInstance hud) hud.submitInput(p, elementId, clean);
+        });
+        if (shown) return;
         inputs.put(p.getUniqueId(), new PendingInput(ui, elementId, plugin.currentTick() + 20L * 60));
         p.sendMessage(Text.mm("<#ff8fd1>✎</#ff8fd1> <gray>Type your text in chat. Send <white>cancel</white> to stop."));
     }

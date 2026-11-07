@@ -182,7 +182,7 @@ public final class PackBuilder {
                         for (int p = 1; p <= w; p <<= 1) hudGlyph(ui, "", p, h, y);
                     }
                 }
-                case "item", "head" -> { /* not available on HUDs */ }
+                case "item", "head", "model" -> { /* not available on HUDs */ }
                 default -> { // rect, image, button, input
                     for (int y : ys) {
                         if (e.fillEnabled || !e.sprite.isEmpty()) hudGlyph(ui, e.sprite, w, h, y);

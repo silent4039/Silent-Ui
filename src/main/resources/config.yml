@@ -51,6 +51,12 @@ hud:
   # Bossbar colour used as the invisible HUD carrier. Its textures are made transparent in the pack.
   bossbar-color: WHITE
 
+assets:
+  # Download the official Minecraft client jar for this server version from Mojang (once, ~30 MB, cached in
+  # plugins/SilentUI/cache). It gives the editor real item icons, every vanilla texture, and player skins.
+  # Nothing is sent to players. Set false if your host blocks outgoing downloads.
+  enabled: true
+
 world-ui:
   # Max distance a player can interact with a world UI from
   interact-range: 8.0

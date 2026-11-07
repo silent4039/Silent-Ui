@@ -23,10 +23,16 @@ public final class UiDefinition {
     public List<ElementDef> elements = new ArrayList<>();
     public List<AnimationDef> animations = new ArrayList<>();
     public ScriptDef script = new ScriptDef();
+    /** Tab sets: tabset name -> page shown when the UI opens. Elements join a page with group "tabset/page". */
+    public Map<String, String> tabs = new java.util.LinkedHashMap<>();
+    /** Custom commands with typed arguments. */
+    public List<CommandDef> commands = new ArrayList<>();
 
     public boolean isHud() { return "hud".equalsIgnoreCase(type); }
     public boolean isWorld() { return "world".equalsIgnoreCase(type); }
-    public boolean isScreen() { return !isHud() && !isWorld(); }
+    /** Logic-only file: commands and functions, nothing drawn. */
+    public boolean isLogic() { return "logic".equalsIgnoreCase(type); }
+    public boolean isScreen() { return !isHud() && !isWorld() && !isLogic(); }
 
     public ElementDef element(String elementId) {
         if (elementId == null) return null;
@@ -125,6 +131,43 @@ public final class UiDefinition {
 
         /** input: shown while empty */
         public String placeholder = "Type...";
+
+        /** Group name. "tabset/page" makes the element part of a tab page. */
+        public String group = "";
+        /** Marks a tab button: "tabset/page". Clicking it switches to that page; it uses the active style while selected. */
+        public String tabFor = "";
+        public String activeFill = "";
+        public String activeSprite = "";
+        public String activeTextColor = "";
+
+        /** item: 1.21.4+ item model key (e.g. "minecraft:diamond" or "myitems:ruby") */
+        public String itemModel = "";
+        public boolean glint = false;
+        /** item/head/model: degrees per second of continuous spin */
+        public double spin = 0;
+        /** item/head/model: scrolling over it rotates it */
+        public boolean rotatable = false;
+    }
+
+    public static final class CommandDef {
+        public String name = "";
+        public List<String> aliases = new ArrayList<>();
+        public String permission = "";
+        public String description = "";
+        public List<ArgDef> args = new ArrayList<>();
+        /** Function (on_function node name) to run. Optional. */
+        public String function = "";
+        /** Open/show this UI before running. */
+        public boolean open = true;
+    }
+
+    public static final class ArgDef {
+        public String name = "arg";
+        /** word | text (rest of the line) | number | integer | player | choice | boolean */
+        public String type = "word";
+        public List<String> choices = new ArrayList<>();
+        public boolean optional = false;
+        public String def = "";
     }
 
     public static final class AnimationDef {

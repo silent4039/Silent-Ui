@@ -59,6 +59,8 @@ public final class SilentUI extends JavaPlugin {
     private String packSha1Hex = "";
     private long tick;
     private BossBar.Color hudColor = BossBar.Color.WHITE;
+    private dev.silent.silentui.util.ProfileCache profiles;
+    private dev.silent.silentui.assets.AssetManager assets;
 
     @Override
     public void onEnable() {
@@ -72,6 +74,13 @@ public final class SilentUI extends JavaPlugin {
         hud = new HudManager(this);
         scripts = new ScriptRunner(this);
         dynamicCommands = new DynamicCommands(this);
+        profiles = new dev.silent.silentui.util.ProfileCache(this);
+        assets = new dev.silent.silentui.assets.AssetManager(getLogger(), getDataFolder().toPath().resolve("cache"), Bukkit.getMinecraftVersion());
+        if (getConfig().getBoolean("assets.enabled", true)) {
+            Thread t = new Thread(assets::load, "SilentUI-Assets");
+            t.setDaemon(true);
+            t.start();
+        }
 
         cleanupLeftovers();
         try {
@@ -111,6 +120,7 @@ public final class SilentUI extends JavaPlugin {
         if (hud != null) hud.clear();
         if (dynamicCommands != null) dynamicCommands.unregisterAll();
         if (server != null) server.stop();
+        if (assets != null) assets.close();
     }
 
     private void tickAll() {
@@ -216,6 +226,7 @@ public final class SilentUI extends JavaPlugin {
         server = new PackServer(getLogger(), getConfig().getInt("web.port", 8163), getConfig().getString("web.upload-token", ""),
                 () -> registry, this::handleUpload);
         try {
+            new dev.silent.silentui.assets.AssetApi(assets, profiles, getDataFolder().toPath().resolve("presets")).register(server);
             server.start();
             buildPackToServer();
         } catch (IOException e) {
@@ -300,6 +311,7 @@ public final class SilentUI extends JavaPlugin {
         reloadConfig();
         readSettings();
         Text.resetPapi();
+        manager.clearLogic();
         try {
             registry.load();
         } catch (IOException e) {
@@ -329,6 +341,8 @@ public final class SilentUI extends JavaPlugin {
     public PlaneUi.Settings settings() { return settings; }
     public long currentTick() { return tick; }
     public BossBar.Color hudBarColor() { return hudColor; }
+    public dev.silent.silentui.util.ProfileCache profiles() { return profiles; }
+    public dev.silent.silentui.assets.AssetManager assets() { return assets; }
 
     public Map<String, String> vars(Player p) {
         return vars.computeIfAbsent(p.getUniqueId(), k -> new ConcurrentHashMap<>());

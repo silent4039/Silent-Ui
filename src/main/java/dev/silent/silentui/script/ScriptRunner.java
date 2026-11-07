@@ -39,6 +39,7 @@ public final class ScriptRunner {
     /** Fire every event node of {@code type} that passes {@code filter}. */
     public void fire(UiInstance ui, Player player, String type, Predicate<NodeDef> filter, Map<String, String> extra) {
         if (ui == null || !ui.isActive()) return;
+        if (ui instanceof dev.silent.silentui.render.PlaneUi plane && plane.isEditMode()) return;
         for (NodeDef node : ui.def().script.nodes) {
             if (!type.equals(node.type)) continue;
             if (filter != null && !filter.test(node)) continue;
@@ -244,11 +245,101 @@ public final class ScriptRunner {
                 double chance = Text.num(n.prop("chance", "50"), 50) / 100.0;
                 return ThreadLocalRandom.current().nextDouble() < chance ? "true" : "false";
             }
+            case "switch_tab" -> ui.switchTab(n.prop("tabset", ""), p(ui, player, n, "page", "", x));
+            case "show_group" -> ui.setGroupVisible(n.prop("group", ""), true);
+            case "hide_group" -> ui.setGroupVisible(n.prop("group", ""), false);
+            case "toggle_group" -> ui.setGroupVisible(n.prop("group", ""), null);
+            case "set_item" -> {
+                if (st != null) {
+                    st.item = p(ui, player, n, "item", "minecraft:stone", x);
+                    ui.refresh(el, 0);
+                }
+            }
+            case "set_head" -> {
+                if (st != null) {
+                    st.headOwner = p(ui, player, n, "owner", "", x);
+                    ui.refresh(el, 0);
+                }
+            }
+            case "rotate" -> {
+                if (st != null) {
+                    st.turn += Text.num(n.prop("degrees", "90"), 90);
+                    ui.refresh(el, (int) Text.num(n.prop("ticks", "10"), 10));
+                }
+            }
+            case "give_item" -> {
+                if (player != null) giveItem(player, ui, n, x);
+            }
+            case "call_function" -> {
+                Map<String, String> args = new HashMap<>(x);
+                for (String part : n.prop("args", "").split(",")) {
+                    int eq = part.indexOf('=');
+                    if (eq <= 0) continue;
+                    String key = part.substring(0, eq).trim();
+                    args.put(key, Text.apply(part.substring(eq + 1).trim(), player,
+                            player == null ? null : plugin.vars(player)));
+                }
+                String target = n.prop("ui", "");
+                UiInstance tgt = target.isEmpty() || target.equals(ui.def().id) ? ui : plugin.manager().instanceFor(player, target);
+                if (tgt != null) callFunction(tgt, player, n.prop("name", ""), args);
+            }
             default -> {
                 // event nodes or unknown types just pass through
             }
         }
         return "then";
+    }
+
+    private int callDepth;
+
+    /** Runs every "When function is called" node with this name. Nested calls are capped at 16 deep. */
+    public void callFunction(UiInstance ui, Player player, String name, Map<String, String> args) {
+        if (name == null || name.isEmpty()) return;
+        if (callDepth >= 16) {
+            plugin.getLogger().warning("[SilentUI] Function '" + name + "' in '" + ui.def().id + "' recursed too deep, stopped.");
+            return;
+        }
+        callDepth++;
+        try {
+            fire(ui, player, "on_function", node -> name.equalsIgnoreCase(node.prop("name", "")), args);
+        } finally {
+            callDepth--;
+        }
+    }
+
+    private void giveItem(Player player, UiInstance ui, NodeDef n, Map<String, String> x) {
+        String id = p(ui, player, n, "item", "minecraft:diamond", x).toLowerCase(java.util.Locale.ROOT);
+        org.bukkit.Material m = org.bukkit.Material.matchMaterial(id);
+        if (m == null || !m.isItem() || m.isAir()) {
+            plugin.getLogger().warning("[SilentUI] give_item: unknown item " + id);
+            return;
+        }
+        int amount = (int) Math.max(1, Math.min(6400, Text.num(p(ui, player, n, "amount", "1", x), 1)));
+        org.bukkit.inventory.ItemStack stack = new org.bukkit.inventory.ItemStack(m, Math.min(amount, m.getMaxStackSize()));
+        String name = p(ui, player, n, "name", "", x);
+        String lore = p(ui, player, n, "lore", "", x);
+        String model = n.prop("model", "");
+        stack.editMeta(meta -> {
+            if (!name.isEmpty()) meta.displayName(Text.mm("<!italic>" + name));
+            if (!lore.isEmpty()) {
+                java.util.List<Component> lines = new java.util.ArrayList<>();
+                for (String l : lore.split("\\|")) lines.add(Text.mm("<!italic><gray>" + l));
+                meta.lore(lines);
+            }
+            if (!model.isEmpty()) {
+                org.bukkit.NamespacedKey k = org.bukkit.NamespacedKey.fromString(model.toLowerCase(java.util.Locale.ROOT));
+                if (k != null) meta.setItemModel(k);
+            }
+        });
+        int left = amount;
+        while (left > 0) {
+            org.bukkit.inventory.ItemStack part = stack.clone();
+            part.setAmount(Math.min(left, m.getMaxStackSize()));
+            left -= part.getAmount();
+            for (org.bukkit.inventory.ItemStack over : player.getInventory().addItem(part).values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), over);
+            }
+        }
     }
 
     private static boolean compare(String a, String op, String b) {

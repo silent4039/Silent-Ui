@@ -44,6 +44,8 @@ public final class SuiCommand implements TabExecutor {
             case "hud" -> hud(sender, args);
             case "world" -> world(sender, args);
             case "anim" -> anim(sender, args);
+            case "edit" -> edit(sender, args);
+            case "ed" -> ed(sender, args);
             case "var" -> var(sender, args);
             case "reload" -> {
                 if (!admin(sender)) return true;
@@ -89,6 +91,7 @@ public final class SuiCommand implements TabExecutor {
                 "/sui hud <show|hide|toggle> <ui> [player]",
                 "/sui world place <ui> [name] <dark_gray>- place a world UI in front of you",
                 "/sui world remove <name> | list",
+                "/sui edit <ui> <dark_gray>- edit a UI in game",
                 "/sui anim <animation> [player] <dark_gray>- play an animation on the open UI",
                 "/sui var <player> <name> <value> <dark_gray>- set a script variable",
                 "/sui reload | list | pack [player] | editor"
@@ -237,6 +240,43 @@ public final class SuiCommand implements TabExecutor {
         }
     }
 
+    private void edit(CommandSender sender, String[] args) {
+        if (!admin(sender)) return;
+        if (!(sender instanceof Player p)) {
+            msg(sender, "<red>Players only.");
+            return;
+        }
+        if (args.length < 2) {
+            msg(sender, "<red>Usage: /sui edit <ui>");
+            return;
+        }
+        UiDefinition def = plugin.registry().get(args[1]);
+        if (def == null) {
+            msg(sender, "<red>Unknown UI: " + args[1]);
+            return;
+        }
+        if (def.isLogic()) {
+            msg(sender, "<red>" + def.id + " is a logic file (commands and functions only). Edit it in the web editor.");
+            return;
+        }
+        plugin.manager().startEditing(p, def);
+    }
+
+    /** /sui ed set <prop> <value...> (used by the editor's chat fallback) */
+    private void ed(CommandSender sender, String[] args) {
+        if (!admin(sender) || !(sender instanceof Player p)) return;
+        dev.silent.silentui.render.EditController ctrl = plugin.manager().editor(p);
+        if (ctrl == null) {
+            msg(sender, "<red>You are not editing a UI. Use /sui edit <ui>.");
+            return;
+        }
+        if (args.length >= 3 && args[1].equalsIgnoreCase("set")) {
+            ctrl.setFromCommand(args[2], args.length > 3 ? String.join(" ", Arrays.copyOfRange(args, 3, args.length)) : "");
+        } else {
+            msg(sender, "<red>Usage: /sui ed set <property> <value>");
+        }
+    }
+
     private void var(CommandSender sender, String[] args) {
         if (!admin(sender)) return;
         if (args.length < 4) {
@@ -252,10 +292,11 @@ public final class SuiCommand implements TabExecutor {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            out.addAll(List.of("open", "close", "hud", "world", "anim", "var", "reload", "list", "pack", "editor", "help"));
+            out.addAll(List.of("open", "close", "edit", "hud", "world", "anim", "var", "reload", "list", "pack", "editor", "help"));
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
-                case "open" -> plugin.registry().all().stream().filter(d -> !d.isWorld()).forEach(d -> out.add(d.id));
+                case "open" -> plugin.registry().all().stream().filter(d -> !d.isWorld() && !d.isLogic()).forEach(d -> out.add(d.id));
+                case "edit" -> plugin.registry().all().stream().filter(d -> !d.isLogic()).forEach(d -> out.add(d.id));
                 case "hud" -> out.addAll(List.of("show", "hide", "toggle"));
                 case "world" -> out.addAll(List.of("place", "remove", "list"));
                 case "close", "pack", "var" -> Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));

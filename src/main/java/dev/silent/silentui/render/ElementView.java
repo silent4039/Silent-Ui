@@ -7,19 +7,29 @@ import dev.silent.silentui.util.Text;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemDisplay;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 
+import java.lang.reflect.Method;
+import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 
 /**
- * The display entities drawing one element. Only sends what actually changed, so idle UIs cost no packets.
+ * The entities drawing one element. Only sends what actually changed, so idle UIs cost no packets.
  */
 final class ElementView {
 
@@ -31,10 +41,15 @@ final class ElementView {
     private TextDisplay fillBar;      // progress fill
     private TextDisplay label;        // text
     private ItemDisplay item;         // item / head
+    private LivingEntity model;       // player model (mannequin)
 
     private final Cache bgCache = new Cache(), fillCache = new Cache(), labelCache = new Cache(), itemCache = new Cache();
-    private String lastResolvedText;
-    private String headOwnerApplied;
+    private String itemApplied;
+    private ItemStack itemStackApplied;
+    private String profileApplied;
+    private Location modelLoc;
+    private double modelScale = -1;
+    private boolean modelHidden;
 
     private static final class Cache {
         Transformation transform;
@@ -54,10 +69,20 @@ final class ElementView {
 
     void spawn() {
         switch (s.type()) {
-            case "item", "head" -> item = ui.spawnDisplay(ItemDisplay.class, d -> {
-                d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.GUI);
-                d.setItemStack(buildItem());
-            });
+            case "item", "head" -> {
+                if (s.def.fillEnabled) background = ui.spawnDisplay(TextDisplay.class, d -> { });
+                item = ui.spawnDisplay(ItemDisplay.class, d -> {
+                    d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.GUI);
+                    d.setItemStack(new ItemStack(Material.AIR));
+                });
+            }
+            case "model" -> {
+                if (s.def.fillEnabled) background = ui.spawnDisplay(TextDisplay.class, d -> { });
+                model = ui.spawnModel();
+                if (model == null) { // server without mannequins: fall back to a head
+                    item = ui.spawnDisplay(ItemDisplay.class, d -> d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.GUI));
+                }
+            }
             case "text" -> {
                 if (hasBackground()) background = ui.spawnDisplay(TextDisplay.class, d -> { });
                 label = ui.spawnDisplay(TextDisplay.class, d -> { });
@@ -76,7 +101,6 @@ final class ElementView {
                 if (!"image".equals(s.type()) || !s.def.text.isEmpty()) label = ui.spawnDisplay(TextDisplay.class, d -> { });
             }
         }
-        if (item != null && "head".equals(s.type())) resolveHead();
     }
 
     private boolean hasBackground() {
@@ -84,30 +108,35 @@ final class ElementView {
     }
 
     void remove() {
-        if (background != null) background.remove();
-        if (fillBar != null) fillBar.remove();
-        if (label != null) label.remove();
-        if (item != null) item.remove();
+        for (Entity e : new Entity[]{background, fillBar, label, item, model}) if (e != null) e.remove();
+    }
+
+    boolean valid() {
+        for (Entity e : new Entity[]{background, fillBar, label, item, model}) if (e != null && !e.isValid()) return false;
+        return true;
     }
 
     // ------------------------------------------------------------------ updates
 
     void update(int interp) {
-        if (background != null) updateGlyph(background, bgCache, s.effectiveSprite(), s.effectiveFill(),
-                s.x, s.y, s.w, s.h, 0, interp, s.def.fillEnabled || !s.effectiveSprite().isEmpty());
+        if (background != null) {
+            boolean show = s.def.fillEnabled || !s.effectiveSprite().isEmpty();
+            updateGlyph(background, bgCache, s.effectiveSprite(), s.effectiveFill(), s.x, s.y, s.w, s.h, 0, interp, show);
+        }
         if (fillBar != null) {
             double f = progressFraction();
-            String sprite = s.def.barSprite;
-            updateGlyph(fillBar, fillCache, sprite, s.def.barColor, s.x, s.y, s.w * f, s.h, 1, interp, f > 0);
+            updateGlyph(fillBar, fillCache, s.def.barSprite, s.def.barColor, s.x, s.y, s.w * f, s.h, 1, interp, f > 0);
         }
         if (label != null) updateLabel(interp);
         if (item != null) {
-            Transformation t = ui.itemTransform(s, layer);
-            applyTransform(item, itemCache, t, interp);
+            applyItem();
+            applyTransform(item, itemCache, ui.itemTransform(s, layer), interp);
         }
+        if (model != null) updateModel();
     }
 
     void refreshText() {
+        if (item != null && s.item != null && s.item.indexOf('{') >= 0) applyItem();
         if (label == null && fillBar == null) return;
         String raw = labelSource();
         boolean dynamic = raw.indexOf('{') >= 0 || raw.indexOf('%') >= 0
@@ -178,7 +207,6 @@ final class ElementView {
             labelCache.lineWidth = lineWidth;
         }
         String plain = Text.plain(comp);
-        lastResolvedText = plain;
         int lines = FontWidths.lines(plain, lineWidth);
         int tw = 0;
         for (String line : plain.split("\n")) tw = Math.max(tw, Math.min(lineWidth, FontWidths.width(line, false)));
@@ -212,41 +240,129 @@ final class ElementView {
         c.transform = t;
     }
 
-    // ------------------------------------------------------------------ items
+    // ------------------------------------------------------------------ items & heads
 
-    private ItemStack buildItem() {
-        if ("head".equals(s.type())) return new ItemStack(Material.PLAYER_HEAD);
-        Material m = Material.matchMaterial(s.def.item == null ? "" : s.def.item);
+    private void applyItem() {
+        if ("head".equals(s.type()) || "model".equals(s.type())) {
+            applyHead();
+            return;
+        }
+        Player viewer = ui.placeholderPlayer();
+        String raw = s.item == null ? "" : s.item;
+        boolean dynamic = raw.indexOf('{') >= 0;
+        if (!dynamic && raw.equals(itemApplied)) return;
+        ItemStack stack = resolveItem(raw, viewer);
+        if (s.def.itemModel != null && !s.def.itemModel.isEmpty() || s.def.glint) {
+            stack = stack.clone();
+            stack.editMeta(meta -> {
+                if (!s.def.itemModel.isEmpty()) {
+                    NamespacedKey key = NamespacedKey.fromString(s.def.itemModel.toLowerCase(Locale.ROOT));
+                    if (key != null) meta.setItemModel(key);
+                }
+                if (s.def.glint) meta.setEnchantmentGlintOverride(true);
+            });
+        }
+        itemApplied = raw;
+        if (stack.equals(itemStackApplied)) return;
+        itemStackApplied = stack;
+        item.setItemStack(stack);
+    }
+
+    /** "minecraft:diamond", "diamond", or the viewer's gear: {hand} {offhand} {helmet} {chestplate} {leggings} {boots} */
+    static ItemStack resolveItem(String raw, Player viewer) {
+        String id = raw.trim().toLowerCase(Locale.ROOT);
+        if (viewer != null && id.startsWith("{") && id.endsWith("}")) {
+            PlayerInventory inv = viewer.getInventory();
+            ItemStack it = switch (id) {
+                case "{hand}", "{mainhand}" -> inv.getItemInMainHand();
+                case "{offhand}" -> inv.getItemInOffHand();
+                case "{helmet}", "{head}" -> inv.getHelmet();
+                case "{chestplate}", "{chest}" -> inv.getChestplate();
+                case "{leggings}", "{legs}" -> inv.getLeggings();
+                case "{boots}", "{feet}" -> inv.getBoots();
+                default -> null;
+            };
+            return it == null ? new ItemStack(Material.AIR) : it.clone();
+        }
+        Material m = Material.matchMaterial(id);
         if (m == null || !m.isItem() || m.isAir()) m = Material.BARRIER;
         return new ItemStack(m);
     }
 
-    private void resolveHead() {
-        String owner = s.def.headOwner == null ? "" : s.def.headOwner.trim();
+    private String ownerName() {
         Player viewer = ui.placeholderPlayer();
-        if (owner.isEmpty() || owner.equalsIgnoreCase("{player}")) {
-            if (viewer == null) return;
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-            head.editMeta(SkullMeta.class, meta -> meta.setOwningPlayer(viewer));
-            item.setItemStack(head);
-            headOwnerApplied = viewer.getName();
-            return;
-        }
-        if (owner.equals(headOwnerApplied)) return;
-        headOwnerApplied = owner;
-        PlayerProfile profile = Bukkit.createProfile(owner);
-        CompletableFuture.supplyAsync(() -> {
-            profile.complete(true);
-            return profile;
-        }).thenAccept(done -> Bukkit.getScheduler().runTask(ui.plugin(), () -> {
-            if (item == null || !item.isValid()) return;
-            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-            head.editMeta(SkullMeta.class, meta -> meta.setPlayerProfile(done));
-            item.setItemStack(head);
-        }));
+        String owner = s.headOwner == null ? "" : s.headOwner.trim();
+        if (owner.isEmpty() || owner.equalsIgnoreCase("{player}")) return viewer == null ? "" : viewer.getName();
+        return Text.apply(owner, viewer, viewer == null ? null : ui.plugin().vars(viewer));
     }
 
-    String lastText() {
-        return lastResolvedText;
+    private void applyHead() {
+        String owner = ownerName();
+        if (Objects.equals(owner, profileApplied)) return;
+        profileApplied = owner;
+        if (owner.isEmpty()) {
+            if (item != null) item.setItemStack(new ItemStack(Material.PLAYER_HEAD));
+            return;
+        }
+        ui.plugin().profiles().get(owner, profile -> {
+            if (!owner.equals(profileApplied)) return;
+            if (item != null && item.isValid()) {
+                ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+                head.editMeta(SkullMeta.class, meta -> meta.setPlayerProfile(profile));
+                item.setItemStack(head);
+            }
+            if (model != null && model.isValid()) applyProfile(model, profile);
+        });
+    }
+
+    // ------------------------------------------------------------------ player model (mannequin)
+
+    private void updateModel() {
+        applyHead();
+        boolean hide = !s.visible || s.opacity < 0.05 || s.effectiveScale() <= 0.0001;
+        if (hide != modelHidden) {
+            model.setInvisible(hide);
+            modelHidden = hide;
+        }
+        double sc = s.effectiveScale();
+        double heightBlocks = s.h * sc * ui.unit;
+        double scale = Math.max(0.0625, Math.min(16, heightBlocks / 1.8));
+        if (Math.abs(scale - modelScale) > 1e-4) {
+            AttributeInstance a = model.getAttribute(Attribute.SCALE);
+            if (a != null) a.setBaseValue(scale);
+            modelScale = scale;
+        }
+        double[] foot = ui.warp(s, s.x + s.w / 2, s.y + s.h);
+        Vector p = ui.worldPoint(foot[0], foot[1]).add(ui.normal.clone().multiply(ui.layerZ(layer, 0.5) + 0.05 * scale));
+        float yaw = (float) (ui.displayYaw + s.turn);
+        Location loc = new Location(ui.origin.getWorld(), p.getX(), p.getY(), p.getZ(), yaw, 0);
+        if (modelLoc == null || modelLoc.distanceSquared(loc) > 1e-8 || Math.abs(modelLoc.getYaw() - yaw) > 0.01) {
+            model.teleport(loc);
+            model.setBodyYaw(yaw);
+            modelLoc = loc;
+        }
+    }
+
+    /** Mannequin API differs between versions, so it is reached by reflection and failures are ignored. */
+    static void applyProfile(Entity e, PlayerProfile profile) {
+        try {
+            Class<?> rp = Class.forName("io.papermc.paper.datacomponent.item.ResolvableProfile");
+            Object resolvable = rp.getMethod("resolvableProfile", PlayerProfile.class).invoke(null, profile);
+            for (Method m : e.getClass().getMethods()) {
+                if (m.getName().equals("setProfile") && m.getParameterCount() == 1) {
+                    Class<?> pt = m.getParameterTypes()[0];
+                    if (pt.isInstance(resolvable)) {
+                        m.invoke(e, resolvable);
+                        return;
+                    }
+                    if (pt.isInstance(profile)) {
+                        m.invoke(e, profile);
+                        return;
+                    }
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // old server
+        }
     }
 }

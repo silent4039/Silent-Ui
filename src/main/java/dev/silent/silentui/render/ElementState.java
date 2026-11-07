@@ -8,8 +8,12 @@ public final class ElementState {
     public final ElementDef def;
     public boolean visible;
     public double x, y, w, h, scale, rotation, opacity;
-    public String fill, sprite, text, textColor, value, max;
+    public String fill, sprite, text, textColor, value, max, item, headOwner;
     public boolean hovered;
+    /** Tab button whose page is showing. */
+    public boolean active;
+    /** Extra yaw (degrees) for item / head / model elements: spin + scroll rotation. */
+    public double turn;
 
     public ElementState(ElementDef def) {
         this.def = def;
@@ -31,7 +35,11 @@ public final class ElementState {
         textColor = def.textColor;
         value = def.value;
         max = def.max;
+        item = def.item;
+        headOwner = def.headOwner;
         hovered = false;
+        active = false;
+        turn = 0;
     }
 
     public String type() {
@@ -42,20 +50,36 @@ public final class ElementState {
         return visible && !def.blocked && opacity > 0.01;
     }
 
+    /** True if this element belongs to the group (exact name or a "group/page" below it). */
+    public boolean inGroup(String group) {
+        if (group == null || group.isEmpty() || def.group == null || def.group.isEmpty()) return false;
+        return def.group.equals(group) || def.group.startsWith(group + "/");
+    }
+
     public double effectiveScale() {
         return scale * (hovered ? def.hoverScale : 1.0);
     }
 
+    private static boolean has(String s) {
+        return s != null && !s.isEmpty();
+    }
+
     public String effectiveFill() {
-        return hovered && def.hoverFill != null && !def.hoverFill.isEmpty() ? def.hoverFill : fill;
+        if (hovered && has(def.hoverFill)) return def.hoverFill;
+        if (active && has(def.activeFill)) return def.activeFill;
+        return fill;
     }
 
     public String effectiveSprite() {
-        return hovered && def.hoverSprite != null && !def.hoverSprite.isEmpty() ? def.hoverSprite : sprite;
+        if (hovered && has(def.hoverSprite)) return def.hoverSprite;
+        if (active && has(def.activeSprite)) return def.activeSprite;
+        return sprite;
     }
 
     public String effectiveTextColor() {
-        return hovered && def.hoverTextColor != null && !def.hoverTextColor.isEmpty() ? def.hoverTextColor : textColor;
+        if (hovered && has(def.hoverTextColor)) return def.hoverTextColor;
+        if (active && has(def.activeTextColor)) return def.activeTextColor;
+        return textColor;
     }
 
     /** Pivot (anchor) point in canvas pixels. */

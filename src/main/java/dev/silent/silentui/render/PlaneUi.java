@@ -80,8 +80,44 @@ public abstract class PlaneUi implements UiInstance {
             v.spawn();
             views.put(e.id, v);
         }
+        applyDefaultTabs();
         for (ElementView v : views.values()) v.update(0);
-        animations.autoplay();
+        if (!editMode) animations.autoplay();
+    }
+
+    /** In-game editor sessions draw the UI but never run its scripts or animations. */
+    protected boolean editMode;
+
+    public boolean isEditMode() {
+        return editMode;
+    }
+
+    @Override
+    public java.util.Collection<ElementState> states() {
+        return states.values();
+    }
+
+    /** Scroll over a rotatable item/head/model turns it. Returns true if something rotated. */
+    public boolean scrollRotate(Player p, int dir) {
+        String id = hovered.get(p.getUniqueId());
+        ElementState s = id == null ? null : states.get(id);
+        if (s == null || !s.def.rotatable) return false;
+        s.turn += dir * 22.5;
+        refresh(id, 3);
+        return true;
+    }
+
+    /** Re-applies an element after its item / head / sprite changed in a way the view must rebuild. */
+    public void respawnElement(String id) {
+        ElementView old = views.get(id);
+        ElementState st = states.get(id);
+        if (old == null || st == null) return;
+        int layer = new ArrayList<>(views.keySet()).indexOf(id);
+        old.remove();
+        ElementView v = new ElementView(this, st, layer);
+        v.spawn();
+        views.put(id, v);
+        v.update(0);
     }
 
     public void despawn() {
@@ -98,6 +134,14 @@ public abstract class PlaneUi implements UiInstance {
         if (!active) return;
         ticks++;
         animations.tick();
+        if (ticks % 10 == 0) {
+            for (ElementState s : states.values()) {
+                if (s.def.spin != 0 && s.visible && isTurnable(s)) {
+                    s.turn += s.def.spin * 0.5;
+                    refresh(s.def.id, 10);
+                }
+            }
+        }
         int refresh = plugin.settings().textRefreshTicks;
         if (ticks % refresh == 0) for (ElementView v : views.values()) v.refreshText();
         fireTimers();
@@ -111,6 +155,11 @@ public abstract class PlaneUi implements UiInstance {
                 for (Player p : timerPlayers()) plugin.scripts().fire(this, p, "on_timer", node -> node == n, null);
             }
         }
+    }
+
+    static boolean isTurnable(ElementState s) {
+        String t = s.type();
+        return "item".equals(t) || "head".equals(t) || "model".equals(t);
     }
 
     /** Players timer events run for. */
@@ -155,6 +204,44 @@ public abstract class PlaneUi implements UiInstance {
         });
         afterSpawn(d);
         return d;
+    }
+
+    /** Player-shaped mannequin (1.21.9+). Returns null when the server has no mannequins. */
+    @SuppressWarnings("unchecked")
+    org.bukkit.entity.LivingEntity spawnModel() {
+        org.bukkit.entity.EntityType type = org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.minecraft("mannequin"));
+        if (type == null || type.getEntityClass() == null || !org.bukkit.entity.LivingEntity.class.isAssignableFrom(type.getEntityClass())) return null;
+        Class<? extends org.bukkit.entity.LivingEntity> cls = (Class<? extends org.bukkit.entity.LivingEntity>) type.getEntityClass();
+        Location loc = origin.clone();
+        loc.setYaw(displayYaw);
+        loc.setPitch(0);
+        try {
+            org.bukkit.entity.LivingEntity e = origin.getWorld().spawn(loc, cls, ent -> {
+                ent.setPersistent(false);
+                ent.addScoreboardTag(TAG);
+                ent.setVisibleByDefault(visibleByDefault());
+                ent.setGravity(false);
+                ent.setInvulnerable(true);
+                ent.setSilent(true);
+                ent.setCollidable(false);
+                ent.setAI(false);
+                callIfPresent(ent, "setImmovable", true);
+                callIfPresent(ent, "setHideDescription", true);
+                callIfPresent(ent, "setDescriptionVisible", false);
+            });
+            afterSpawn(e);
+            return e;
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    static void callIfPresent(Object target, String method, boolean value) {
+        try {
+            target.getClass().getMethod(method, boolean.class).invoke(target, value);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            // not available on this version
+        }
     }
 
     protected Interaction spawnHitbox(Location at, float width, float height) {
@@ -243,7 +330,9 @@ public abstract class PlaneUi implements UiInstance {
         float k = (float) (sc * Math.min(s.w, s.h) * unit);
         Quaternionf q = new Quaternionf().rotateZ((float) -Math.toRadians(s.rotation));
         if (plugin.settings().itemFlip) q.rotateY((float) Math.PI);
-        return new Transformation(center, q, new Vector3f(k, k, k * 0.5f), new Quaternionf());
+        Quaternionf spin = new Quaternionf().rotateY((float) Math.toRadians(s.turn));
+        float depth = "item".equals(s.type()) && s.turn == 0 && s.def.spin == 0 ? k * 0.5f : k;
+        return new Transformation(center, q, new Vector3f(k, k, depth), spin);
     }
 
     static Transformation zero() {
@@ -316,6 +405,7 @@ public abstract class PlaneUi implements UiInstance {
             String b = n.prop("button", "any");
             return (el.isEmpty() || el.equals(s.def.id)) && ("any".equals(b) || b.equals(button));
         }, Map.of("element", s.def.id, "button", button));
+        clickedTabButton(s);
         if ("input".equals(s.type())) focusInput(p, s.def.id);
     }
 

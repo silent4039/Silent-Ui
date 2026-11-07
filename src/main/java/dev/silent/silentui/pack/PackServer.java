@@ -36,6 +36,27 @@ public final class PackServer {
     /** Called (async thread) with an uploaded definition; returns an error or null. */
     private final Function<UiDefinition, String> uploadHandler;
 
+    /** Extra handlers registered by other parts of the plugin (assets, presets). */
+    public interface Route {
+        Reply handle(String method, String path, Map<String, String> query, byte[] body, boolean authed) throws IOException;
+    }
+
+    public record Reply(int code, String type, byte[] body, int maxAgeSeconds) {
+        public static Reply json(int code, String json) {
+            return new Reply(code, "application/json", json.getBytes(StandardCharsets.UTF_8), 0);
+        }
+
+        public static Reply png(byte[] data, int maxAge) {
+            return new Reply(200, "image/png", data, maxAge);
+        }
+    }
+
+    private final Map<String, Route> routes = new java.util.LinkedHashMap<>();
+
+    public void route(String prefix, Route route) {
+        routes.put(prefix, route);
+    }
+
     private HttpServer server;
     private volatile byte[] pack = new byte[0];
     private volatile String packHash = "";
@@ -101,6 +122,26 @@ public final class PackServer {
             }
             if (path.equals("/") || path.equals("/editor") || path.equals("/editor/")) {
                 send(ex, 200, "text/html; charset=utf-8", editorHtml);
+                return;
+            }
+            for (Map.Entry<String, Route> r : routes.entrySet()) {
+                if (!path.startsWith(r.getKey())) continue;
+                Map<String, String> q = query(ex.getRequestURI().getRawQuery());
+                String given = ex.getRequestHeaders().getFirst("X-SilentUI-Token");
+                if (given == null) given = q.get("token");
+                boolean authed = token != null && !token.isEmpty() && given != null && constantEquals(token, given);
+                byte[] body = "POST".equals(ex.getRequestMethod()) ? readLimited(ex.getRequestBody()) : new byte[0];
+                if (body == null) {
+                    json(ex, 413, error("Upload too large"));
+                    return;
+                }
+                Reply reply = r.getValue().handle(ex.getRequestMethod(), path, q, body, authed);
+                if (reply == null) {
+                    send(ex, 404, "text/plain", "Not found".getBytes(StandardCharsets.UTF_8));
+                    return;
+                }
+                if (reply.maxAgeSeconds() > 0) ex.getResponseHeaders().set("Cache-Control", "public, max-age=" + reply.maxAgeSeconds());
+                send(ex, reply.code(), reply.type(), reply.body());
                 return;
             }
             if (path.startsWith("/api/")) {

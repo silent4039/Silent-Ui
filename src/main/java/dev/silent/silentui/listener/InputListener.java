@@ -49,6 +49,10 @@ public final class InputListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onInteractEntity(PlayerInteractEntityEvent e) {
+        if (e.getRightClicked().getScoreboardTags().contains("silentui") && plugin.manager().byHitbox(e.getRightClicked()) == null) {
+            e.setCancelled(true); // player models and other UI entities are not interactable
+            return;
+        }
         if (plugin.manager().byHitbox(e.getRightClicked()) == null) return;
         e.setCancelled(true);
         if (e.getHand() != EquipmentSlot.HAND) return;

@@ -32,10 +32,34 @@ public final class ScreenSession extends PlaneUi {
     private final long openedAtTick;
 
     public ScreenSession(SilentUI plugin, UiDefinition def, Player player) {
-        super(plugin, def, originFor(plugin, player), player.getEyeLocation().getYaw() + 180f, unitFor(plugin, def));
+        this(plugin, def, player, null, originFor(plugin, player), player.getEyeLocation().getYaw() + 180f);
+    }
+
+    /** Editor sessions keep the same spot in the world across rebuilds. */
+    public ScreenSession(SilentUI plugin, UiDefinition def, Player player, EditController editor, Location origin, float displayYaw) {
+        super(plugin, def, origin, displayYaw, unitFor(plugin, def));
         this.player = player;
         this.distance = plugin.settings().screenDistance;
         this.openedAtTick = plugin.currentTick();
+        this.editor = editor;
+        this.editMode = editor != null;
+    }
+
+    private final EditController editor;
+    private boolean keepView;
+
+    public EditController editor() {
+        return editor;
+    }
+
+    /** Skip re-aiming the camera on spawn (editor rebuilds). */
+    public ScreenSession keepView(boolean keep) {
+        this.keepView = keep;
+        return this;
+    }
+
+    public Location originLocation() {
+        return origin.clone();
     }
 
     private static Location originFor(SilentUI plugin, Player p) {
@@ -62,9 +86,11 @@ public final class ScreenSession extends PlaneUi {
     @Override
     public void spawn() {
         // look straight at the centre so the cursor starts in the middle
-        Location look = player.getLocation();
-        look.setPitch(0);
-        plugin.manager().internalTeleport(player, look);
+        if (!keepView) {
+            Location look = player.getLocation();
+            look.setPitch(0);
+            plugin.manager().internalTeleport(player, look);
+        }
 
         UiDefinition.Settings st = def.settings;
         if (st.dim > 0.001) {
@@ -116,6 +142,7 @@ public final class ScreenSession extends PlaneUi {
         if (def.settings.clampCursor) c = clamp(eye, c);
         lastCursor = c;
         updateHover(player, c);
+        if (editor != null) editor.tick(c);
         if (cursor != null && c != null) {
             cursorState.x = c[0];
             cursorState.y = c[1];
@@ -143,6 +170,11 @@ public final class ScreenSession extends PlaneUi {
 
     public double[] cursor() {
         return lastCursor;
+    }
+
+    /** Re-evaluates hover right now (after the editor moved things under the cursor). */
+    public void rehover() {
+        hovered.remove(player.getUniqueId());
     }
 
     public boolean inClickGrace() {

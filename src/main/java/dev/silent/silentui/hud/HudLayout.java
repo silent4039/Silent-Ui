@@ -55,6 +55,7 @@ public final class HudLayout {
     /** Sprites a script may switch this element to (set_sprite nodes). */
     public static Set<String> alternateSprites(UiDefinition ui, ElementDef e) {
         Set<String> out = new LinkedHashSet<>();
+        if (e.activeSprite != null && !e.activeSprite.isEmpty()) out.add(e.activeSprite);
         for (UiDefinition.NodeDef n : ui.script.nodes) {
             if ("set_sprite".equals(n.type) && e.id.equals(n.prop("element", ""))) {
                 String s = n.prop("sprite", "");
