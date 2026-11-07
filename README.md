@@ -36,13 +36,25 @@ Already using ItemsAdder, Nexo, Oraxen or your own pack? Set `resource-pack.send
 
 ## The editor
 
+![Silent UI Studio workspace](docs/editor-studio.png)
+
+The Studio workspace keeps **Layers** on the left, the canvas in the middle, and a unified **Inspect** panel on the right. Select an element to edit its layout, text, appearance and actions in one place. **UI settings** edits the document itself.
+
+- **Insert** adds clearly labelled elements in one click. **Browse templates** starts a blank UI, shop, player profile, HUD, world board or chest inventory.
+- **Find anything** (`Ctrl+K`) searches commands, tools and layers. Use the arrow keys and Enter to run a result.
+- Buttons and text inputs have a **Click action** picker for common actions. These create normal script nodes, so you can extend them in the graph editor.
+- Every open document keeps its own undo/redo history, selection and canvas view. **File → Reopen closed UI** recovers a recently closed tab during the current session.
+- Changes save in your browser automatically. The header reports saving, saved, or storage failures. **Export JSON** provides a portable backup; browser storage does not save to your Minecraft server.
+- **Chest inventory** UIs have row/title/header settings and a **Slots** inspector for items, names, lore, models, animated frames and click events. The canvas shows the inventory slot positions.
+- World settings expose billboarding, separate displays per player, view range and tilt. Animation tracks support fill/text colours and 3D turn as well as motion.
+
 - Run `/sui editor` in game. It links to the editor that the plugin hosts (`http://<public-host>:8163/editor`).
 - **Push to server** needs the token in `config.yml → web.upload-token`. It saves the UI and reloads it immediately.
 - **Export** gives you the JSON. Put it in `plugins/SilentUI/uis/` and run `/sui reload`.
 
 When the editor is opened from your server it connects automatically (the chip in the top bar shows **Server · MC 1.21.x**). That unlocks **Assets** (items, textures, skins) and server-side presets.
 
-New to it? The editor opens a **tutorial** on first visit (the **?** button replays it).
+New to it? Open **Help** (`?`) or **Window → Tutorial** when you want a guided tour. The first canvas stays unobstructed.
 
 - **Library** (`L`): a drawer with every item sorted into Armour, Weapons, Tools, Food, Gems & ores, Blocks, Potions, Spawn eggs and Discs, plus your sprites. Drag anything onto the canvas: items become 3D items (flat sprites on HUDs, or hold Alt). PNG files dragged from your computer become sprites where you drop them.
 - **Placeholders** (`{ }` button): every placeholder with a description, including the variables, command arguments and function arguments your UI defines, and common PlaceholderAPI ones. Insert types it into the text box you were editing.
@@ -110,7 +122,18 @@ Text typed by players is stripped of `< > { } % & \ /` before it reaches scripts
 
 1. **File → Open…** and pick this folder (or `pom.xml`). IntelliJ imports it as a Maven project. Use JDK 21.
 2. Run **Build plugin jar** from the run configurations dropdown, or `mvn package` in a terminal.
-3. The jar is at `target/SilentUI-1.0.0.jar`.
+3. The jar is at `target/SilentUI-1.1.0.jar`.
+
+The editor HTML, CSS and JavaScript are bundled in the jar. Node.js is only needed to develop or test the browser editor:
+
+```sh
+npm ci
+npx playwright install chromium
+npm test
+npm run dev:editor
+```
+
+The local preview runs at `http://127.0.0.1:48163/editor/?offline=1`. It works without a Minecraft server; live Minecraft assets, uploads and in-game behavior need a running plugin server. Maven tests cover the packaged editor routes, upload authentication, document validation, persistence and resource-pack generation. Browser tests cover editing, history, drag/resize, preview actions, chest configuration, exports, storage errors and server API flows.
 
 Every push to `main` is built by GitHub Actions, and the jar is published to the `latest` release.
 

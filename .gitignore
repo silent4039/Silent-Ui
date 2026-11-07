@@ -9,3 +9,6 @@ build/
 .idea/dictionaries/
 .DS_Store
 stubs-build/
+node_modules/
+playwright-report/
+test-results/

@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -26,7 +28,7 @@ public final class UiRegistry {
 
     private final Path folder;
     private final Logger log;
-    private final Map<String, UiDefinition> uis = new LinkedHashMap<>();
+    private volatile Map<String, UiDefinition> uis = Map.of();
 
     public UiRegistry(Path folder, Logger log) {
         this.folder = folder;
@@ -36,7 +38,7 @@ public final class UiRegistry {
     public Path folder() { return folder; }
 
     public void load() throws IOException {
-        uis.clear();
+        Map<String, UiDefinition> loaded = new LinkedHashMap<>();
         Files.createDirectories(folder);
         try (DirectoryStream<Path> files = Files.newDirectoryStream(folder, "*.json")) {
             for (Path file : files) {
@@ -48,16 +50,17 @@ public final class UiRegistry {
                         log.warning("[SilentUI] Skipping " + file.getFileName() + ": " + problem);
                         continue;
                     }
-                    if (uis.containsKey(def.id)) {
+                    if (loaded.containsKey(def.id)) {
                         log.warning("[SilentUI] Duplicate UI id '" + def.id + "' in " + file.getFileName() + ", skipped.");
                         continue;
                     }
-                    uis.put(def.id, def);
+                    loaded.put(def.id, def);
                 } catch (JsonParseException | IllegalStateException ex) {
                     log.warning("[SilentUI] Invalid JSON in " + file.getFileName() + ": " + ex.getMessage());
                 }
             }
         }
+        uis = Collections.unmodifiableMap(loaded);
         log.info("[SilentUI] Loaded " + uis.size() + " UI(s).");
     }
 
@@ -67,7 +70,17 @@ public final class UiRegistry {
         if (problem != null) throw new IOException(problem);
         Files.createDirectories(folder);
         Path file = folder.resolve(def.id + ".json");
-        Files.writeString(file, GSON.toJson(def), StandardCharsets.UTF_8);
+        Path temporary = Files.createTempFile(folder, ".silentui-", ".tmp");
+        try {
+            Files.writeString(temporary, GSON.toJson(def), StandardCharsets.UTF_8);
+            try {
+                Files.move(temporary, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException ex) {
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
         return file;
     }
 
@@ -86,6 +99,7 @@ public final class UiRegistry {
 
     /** Validates and cleans a definition that did not come from disk. Returns an error or null. */
     public static String check(UiDefinition def) {
+        if (def == null) return "missing definition";
         return sanitize(def, def.id == null ? "ui" : def.id);
     }
 
@@ -97,6 +111,10 @@ public final class UiRegistry {
 
     /** Fixes up defaults; returns an error message if the file is unusable. */
     static String sanitize(UiDefinition def, String fileName) {
+        if (def == null) return "missing definition";
+        if (def.type == null) def.type = "screen";
+        def.type = def.type.toLowerCase(Locale.ROOT);
+        if (!Set.of("screen", "hud", "world", "logic", "chest").contains(def.type)) return "unknown UI type " + def.type;
         if (def.id == null || def.id.isBlank()) def.id = fileName.replace(".json", "");
         def.id = cleanId(def.id);
         if (def.id.isEmpty()) return "missing id";
@@ -104,6 +122,9 @@ public final class UiRegistry {
         def.canvas.width = Math.max(16, Math.min(2048, def.canvas.width));
         def.canvas.height = Math.max(16, Math.min(2048, def.canvas.height));
         if (def.settings == null) def.settings = new UiDefinition.Settings();
+        if (!Double.isFinite(def.settings.dim) || !Double.isFinite(def.settings.screenSize)
+                || !Double.isFinite(def.settings.worldScale) || !Double.isFinite(def.settings.viewRange)
+                || !Double.isFinite(def.settings.tilt)) return "settings contain a non-finite number";
         if (def.sprites == null) def.sprites = new java.util.ArrayList<>();
         if (def.elements == null) def.elements = new java.util.ArrayList<>();
         if (def.animations == null) def.animations = new java.util.ArrayList<>();
@@ -136,6 +157,7 @@ public final class UiRegistry {
             c.name = c.name.trim().toLowerCase(Locale.ROOT).replaceFirst("^/+", "").replaceAll("[^a-z0-9_\\-]", "");
             if (c.aliases == null) c.aliases = new java.util.ArrayList<>();
             if (c.args == null) c.args = new java.util.ArrayList<>();
+            c.args.removeIf(a -> a == null);
             for (UiDefinition.ArgDef a : c.args) if (a.choices == null) a.choices = new java.util.ArrayList<>();
         }
 
@@ -143,11 +165,18 @@ public final class UiRegistry {
         def.sprites.removeIf(s -> s == null || s.id == null || s.data == null || s.data.isEmpty());
         for (UiDefinition.SpriteDef s : def.sprites) {
             s.id = cleanId(s.id);
+            if (s.id.isEmpty()) return "invalid sprite id";
             if (!spriteIds.add(s.id)) return "duplicate sprite id " + s.id;
         }
         Set<String> ids = new HashSet<>();
         int n = 0;
         for (UiDefinition.ElementDef e : def.elements) {
+            if (e == null) return "null element";
+            if (!Double.isFinite(e.x) || !Double.isFinite(e.y) || !Double.isFinite(e.w) || !Double.isFinite(e.h)
+                    || !Double.isFinite(e.scale) || !Double.isFinite(e.rotation) || !Double.isFinite(e.opacity)
+                    || !Double.isFinite(e.textSize) || !Double.isFinite(e.hoverScale) || !Double.isFinite(e.spin)) {
+                return "element " + e.id + " has a non-finite number";
+            }
             n++;
             if (e.id == null || e.id.isBlank()) e.id = "el" + n;
             if (!ids.add(e.id)) return "duplicate element id " + e.id;
@@ -178,14 +207,21 @@ public final class UiRegistry {
             e.opacity = Math.max(0, Math.min(1, e.opacity));
         }
         for (UiDefinition.AnimationDef a : def.animations) {
+            if (a == null) return "null animation";
             if (a.tracks == null) a.tracks = new java.util.ArrayList<>();
             a.length = Math.max(1, a.length);
             for (UiDefinition.TrackDef t : a.tracks) {
+                if (t == null) return "null animation track";
                 if (t.keys == null) t.keys = new java.util.ArrayList<>();
+                for (UiDefinition.KeyDef k : t.keys) if (k == null || !Double.isFinite(k.v)) return "invalid animation keyframe";
                 t.keys.sort((k1, k2) -> Integer.compare(k1.t, k2.t));
             }
         }
+        Set<String> nodeIds = new HashSet<>();
         for (UiDefinition.NodeDef node : def.script.nodes) {
+            if (node == null) return "null script node";
+            if (node.id == null || node.id.isBlank()) return "missing script node id";
+            if (!nodeIds.add(node.id)) return "duplicate script node id " + node.id;
             if (node.props == null) node.props = new java.util.HashMap<>();
             if (node.next == null) node.next = new java.util.HashMap<>();
         }

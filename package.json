@@ -1,0 +1,25 @@
+{
+  "name": "silent-ui",
+  "version": "1.1.0",
+  "description": "Browser regression tests and local preview for the Silent UI editor",
+  "scripts": {
+    "test": "playwright test",
+    "test:editor": "playwright test",
+    "dev:editor": "node tools/editor-server.cjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/silent4039/Silent-Ui.git"
+  },
+  "keywords": [],
+  "author": "",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/silent4039/Silent-Ui/issues"
+  },
+  "homepage": "https://github.com/silent4039/Silent-Ui#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0"
+  },
+  "private": true
+}

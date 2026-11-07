@@ -17,6 +17,7 @@ import java.security.MessageDigest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
@@ -61,6 +62,8 @@ public final class PackServer {
     private volatile byte[] pack = new byte[0];
     private volatile String packHash = "";
     private byte[] editorHtml;
+    private final Map<String, byte[]> editorAssets = new HashMap<>();
+    private ExecutorService executor;
 
     public PackServer(Logger log, int port, String token, Supplier<UiRegistry> registry,
                       Function<UiDefinition, String> uploadHandler) {
@@ -73,28 +76,35 @@ public final class PackServer {
 
     public void start() throws IOException {
         try (InputStream in = PackServer.class.getResourceAsStream("/editor/index.html")) {
-            String body = in == null ? "<h1>Editor missing from jar</h1>" : new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            // the editor file is a page body (it is also published as a hosted artifact), so wrap it in a document here
-            String page = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
-                    + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,viewport-fit=cover\">"
-                    + "</head><body>" + body + "</body></html>";
-            editorHtml = page.getBytes(StandardCharsets.UTF_8);
+            if (in == null) throw new IOException("Editor HTML is missing from the plugin jar");
+            editorHtml = in.readAllBytes();
+        }
+        for (String name : new String[]{"editor.css", "editor.js"}) {
+            try (InputStream in = PackServer.class.getResourceAsStream("/editor/" + name)) {
+                if (in == null) throw new IOException("Editor asset is missing: " + name);
+                editorAssets.put(name, in.readAllBytes());
+            }
         }
         server = HttpServer.create(new InetSocketAddress(port), 0);
-        server.setExecutor(Executors.newFixedThreadPool(4, r -> {
+        executor = Executors.newFixedThreadPool(4, r -> {
             Thread t = new Thread(r, "SilentUI-Web");
             t.setDaemon(true);
             return t;
-        }));
+        });
+        server.setExecutor(executor);
         server.createContext("/", this::handle);
         server.start();
-        log.info("[SilentUI] Web server running on port " + port + " (pack + editor).");
+        log.info("[SilentUI] Web server running on port " + port() + " (pack + editor).");
     }
 
     public void stop() {
         if (server != null) server.stop(0);
+        if (executor != null) executor.shutdownNow();
+        executor = null;
         server = null;
     }
+
+    public int port() { return server == null ? port : server.getAddress().getPort(); }
 
     public void setPack(byte[] zip, String sha1Hex) {
         this.pack = zip;
@@ -121,8 +131,18 @@ public final class PackServer {
                 return;
             }
             if (path.equals("/") || path.equals("/editor") || path.equals("/editor/")) {
+                ex.getResponseHeaders().set("Cache-Control", "no-cache");
                 send(ex, 200, "text/html; charset=utf-8", editorHtml);
                 return;
+            }
+            // Both forms support relative links from /editor and /editor/.
+            for (Map.Entry<String, byte[]> asset : editorAssets.entrySet()) {
+                if (path.equals("/" + asset.getKey()) || path.equals("/editor/" + asset.getKey())) {
+                    ex.getResponseHeaders().set("Cache-Control", "no-cache");
+                    ex.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
+                    send(ex, 200, asset.getKey().endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", asset.getValue());
+                    return;
+                }
             }
             for (Map.Entry<String, Route> r : routes.entrySet()) {
                 if (!path.startsWith(r.getKey())) continue;
