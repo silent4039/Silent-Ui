@@ -220,6 +220,10 @@ public final class ScriptRunner {
                     player.showTitle(Title.title(glyph, Component.empty(), times));
                 }
             }
+            case "popup" -> dev.silent.silentui.render.Popups.spawn(plugin, ui, player,
+                    p(ui, player, n, "text", "<green>+1", x), n.prop("at", "front"), n.prop("element", ""),
+                    (int) Text.num(n.prop("ticks", "30"), 30), Text.num(n.prop("rise", "0.6"), 0.6),
+                    Text.num(n.prop("scale", "1"), 1), "everyone".equalsIgnoreCase(n.prop("who", "player")));
             case "set_var" -> {
                 if (player != null) plugin.vars(player).put(n.prop("name", "var"), p(ui, player, n, "value", "", x));
             }

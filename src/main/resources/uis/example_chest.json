@@ -1,0 +1,1191 @@
+{
+  "format": 1,
+  "id": "example_chest",
+  "name": "Item Shop",
+  "type": "chest",
+  "canvas": {
+    "width": 176,
+    "height": 200
+  },
+  "settings": {
+    "command": "itemshop",
+    "permission": "",
+    "freeze": true,
+    "closeOnSneak": true,
+    "clampCursor": true,
+    "dim": 0,
+    "cursorSprite": "",
+    "screenSize": 1,
+    "autoShow": false,
+    "worldScale": 1,
+    "billboard": "fixed",
+    "perPlayer": false,
+    "viewRange": 48,
+    "tilt": 0,
+    "rows": 4,
+    "guiTop": 14,
+    "title": ""
+  },
+  "sprites": [
+    {
+      "id": "panel",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALAAAABiCAYAAADwQVl6AAADGUlEQVR4AezUC4oiQRBFUaf36EJciQtxkTOkNMg06ExpRn4iToNQdlVFxrvv4tfp++98Pv/2wWAXB761Pd0FbktfLpeTDwa7ONCcbRJ/tYu2dPvig8AuBJqzzd37L/AuS9sTgZ8ECPyTiO9bESDwVnWttOwauxB4jR5s8SYBAr8JzmtrECDwGj3Y4k0CBH4TnNfWIEDgNXqwxZsECPwmuJmvOftBgMAPFq42JEDgDUuz8oMAgR8sXG1IgMAblmblBwECP1i42pAAgQ+V5uHVCBB4tUbsc4gAgQ/h8vBqBAi8WiP2OUSAwIdweXg1AgRerRH7HCKwjcCHUnm4DAECl6k6Z1AC5+y1TCoCl6k6Z1AC5+y1TCoCl6k6Z9D/EDhncKlyECBwjh7LpiBw2epzBCdwjh7LpiBw2epzBCdwjh7XTDFgKwIPgOyIOAIEjmNr8gACBB4A2RFxBAgcx9bkAQQIPACyI+IIEDiO7czJZc4mcJmqcwYlcM5ey6QicJmqcwYlcM5ey6QicJmqcwYlcO9ezRtKgMBDcTusNwEC9yZq3lACBB6K22G9CRC4N1HzhhIg8FDcDutNIJPAvdmYtwEBAm9QkhWfEyDwczbubECAwBuUZMXnBAj8nI07GxAg8AYlWfE5gT4CP5/vDgKhBAgcitfwaAIEjiZsfigBAofiNTyaAIGjCZsfSoDAoXgN/xeBT+8T+FOC3p9KgMBT8Tv8UwIE/pSg96cSIPBU/A7/lACBPyXo/akECDwV/8zDc5xN4Bw9lk1B4LLV5whO4Bw9lk1B4LLV5whO4Bw9lk1B4AnVO7IfAQL3Y2nSBAIEngDdkf0IELgfS5MmECDwBOiO7EeAwP1YmjSBQDGBJxB2ZCgBAofiNTyaAIGjCZsfSoDAoXgNjyZA4GjC5ocSIHAoXsOjCQwTODqI+TUJELhm72lSEzhNlTWDELhm72lSEzhNlTWDELhm7zulfrkrgV/icXN1AgRevSH7vSRA4Jd43FydwNftdvt1vV5X39N+CPxFoDnb3L3/AreL9g+f6wmDPRg0Z5vRfwAAAP//F+c6OQAAAAZJREFUAwDy1XGaN7FwdAAAAABJRU5ErkJggg==",
+      "width": 176,
+      "height": 98
+    },
+    {
+      "id": "header",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFwAAAASCAYAAADWvblEAAAAmElEQVR4AezSsQ3AIAwEQIcdGYRJPAhDJnkkmq/SvFPwkSzFFG84aPF+vffbpTd4qaMBGj9jjHDpDGAM6/XCAY0Fl05gGy9w3Rgns4DBWUTcG1wMzPEGZxFxb3AxMMcbnEXEvcHFwBxvcBYR95/AxXs4Kt7gxddtcIMXCxSP8wv/Azwzi8eeN24btznnheNjwZWhMoAxrB8AAAD//yy9c6oAAAAGSURBVAMAeFjJgI3GczIAAAAASUVORK5CYII=",
+      "width": 92,
+      "height": 18
+    },
+    {
+      "id": "slotbox",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAQklEQVR4AeySsQkAQAgDg0u5iGO647/+Ahb5wiLCgYUEPGLufn5gqIkIMFQEXlAvLAqaDcqRHM0G5oulPcpMMPTjFwAA//8+B35oAAAABklEQVQDAIj6Ta3LbO2hAAAAAElFTkSuQmCC",
+      "width": 18,
+      "height": 18
+    },
+    {
+      "id": "xbtn",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAeklEQVR4AayPgQnAIBADxbF0lW7XruJclgMPRCht8YXjIb5JzH2cs5T+h/Gs57R58lVrgqO1BG9+7ABvYL+BibgB7qDuRAN2QD2ugY64A2kzaOCeM76Bzl9nfAP/zX9n1NdmcQ1MMHVNUnfP+/0GOpqg89N0z3fbDW4AAAD//1HutGAAAAAGSURBVAMA0CJxGfmwoA4AAAAASUVORK5CYII=",
+      "width": 16,
+      "height": 16
+    }
+  ],
+  "elements": [
+    {
+      "id": "bg",
+      "name": "Panel",
+      "type": "image",
+      "x": 0,
+      "y": 14,
+      "w": 176,
+      "h": 98,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "panel",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "head",
+      "name": "Header tab",
+      "type": "image",
+      "x": 42,
+      "y": 0,
+      "w": 92,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "header",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "head_t",
+      "name": "Header text",
+      "type": "text",
+      "x": 42,
+      "y": 5,
+      "w": 92,
+      "h": 9,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "",
+      "text": "ITEM SHOP",
+      "textColor": "#404040",
+      "textSize": 1,
+      "align": "center",
+      "shadow": false,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "coins",
+      "name": "Coins",
+      "type": "text",
+      "x": 8,
+      "y": 20,
+      "w": 160,
+      "h": 9,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "",
+      "text": "Coins: {var:coins}",
+      "textColor": "#404040",
+      "textSize": 1,
+      "align": "right",
+      "shadow": false,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "close",
+      "name": "Close button",
+      "type": "image",
+      "x": 80,
+      "y": 86,
+      "w": 16,
+      "h": 16,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": false,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "xbtn",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": "<red>Close|<gray>Click to leave"
+    },
+    {
+      "id": "box0",
+      "name": "Slot box 10",
+      "type": "image",
+      "x": 25,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box1",
+      "name": "Slot box 11",
+      "type": "image",
+      "x": 43,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box2",
+      "name": "Slot box 12",
+      "type": "image",
+      "x": 61,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box3",
+      "name": "Slot box 13",
+      "type": "image",
+      "x": 79,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box4",
+      "name": "Slot box 14",
+      "type": "image",
+      "x": 97,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box5",
+      "name": "Slot box 15",
+      "type": "image",
+      "x": 115,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box6",
+      "name": "Slot box 16",
+      "type": "image",
+      "x": 133,
+      "y": 49,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    },
+    {
+      "id": "box_daily",
+      "name": "Slot box 22",
+      "type": "image",
+      "x": 79,
+      "y": 67,
+      "w": 18,
+      "h": 18,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#1e1e1e",
+      "fillEnabled": false,
+      "sprite": "slotbox",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": false,
+      "tooltip": ""
+    }
+  ],
+  "animations": [],
+  "script": {
+    "nodes": [
+      {
+        "id": "c0",
+        "type": "on_open",
+        "x": 40,
+        "y": 40,
+        "props": {},
+        "next": {
+          "then": [
+            "c0b"
+          ]
+        }
+      },
+      {
+        "id": "c0b",
+        "type": "if_var",
+        "x": 320,
+        "y": 40,
+        "props": {
+          "name": "coins",
+          "op": "==",
+          "value": ""
+        },
+        "next": {
+          "true": [
+            "c0c"
+          ]
+        }
+      },
+      {
+        "id": "c0c",
+        "type": "set_var",
+        "x": 600,
+        "y": 40,
+        "props": {
+          "name": "coins",
+          "value": "250"
+        },
+        "next": {}
+      },
+      {
+        "id": "cx",
+        "type": "on_click",
+        "x": 40,
+        "y": 220,
+        "props": {
+          "element": "close",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cx2"
+          ]
+        }
+      },
+      {
+        "id": "cx2",
+        "type": "close_ui",
+        "x": 320,
+        "y": 220,
+        "props": {},
+        "next": {}
+      },
+      {
+        "id": "cd",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 360,
+        "props": {
+          "slot": "22",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cd2"
+          ]
+        }
+      },
+      {
+        "id": "cd2",
+        "type": "add_var",
+        "x": 320,
+        "y": 360,
+        "props": {
+          "name": "coins",
+          "amount": "100"
+        },
+        "next": {
+          "then": [
+            "cd3"
+          ]
+        }
+      },
+      {
+        "id": "cd3",
+        "type": "popup",
+        "x": 600,
+        "y": 360,
+        "props": {
+          "text": "<gold>+100 coins",
+          "at": "front",
+          "ticks": "30",
+          "rise": "0.6",
+          "scale": "1",
+          "who": "player"
+        },
+        "next": {
+          "then": [
+            "cd4"
+          ]
+        }
+      },
+      {
+        "id": "cd4",
+        "type": "set_slot",
+        "x": 880,
+        "y": 360,
+        "props": {
+          "slot": "22",
+          "item": "minecraft:barrier",
+          "amount": "1",
+          "name": "<red>Come back tomorrow",
+          "lore": ""
+        },
+        "next": {}
+      },
+      {
+        "id": "cs0",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 560,
+        "props": {
+          "slot": "10",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf0"
+          ]
+        }
+      },
+      {
+        "id": "cf0",
+        "type": "call_function",
+        "x": 320,
+        "y": 560,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:diamond_sword, price=120"
+        },
+        "next": {}
+      },
+      {
+        "id": "cs1",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 720,
+        "props": {
+          "slot": "11",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf1"
+          ]
+        }
+      },
+      {
+        "id": "cf1",
+        "type": "call_function",
+        "x": 320,
+        "y": 720,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:bow, price=40"
+        },
+        "next": {}
+      },
+      {
+        "id": "cs2",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 880,
+        "props": {
+          "slot": "12",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf2"
+          ]
+        }
+      },
+      {
+        "id": "cf2",
+        "type": "call_function",
+        "x": 320,
+        "y": 880,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:golden_apple, price=50"
+        },
+        "next": {}
+      },
+      {
+        "id": "cs3",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 1040,
+        "props": {
+          "slot": "13",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf3"
+          ]
+        }
+      },
+      {
+        "id": "cf3",
+        "type": "call_function",
+        "x": 320,
+        "y": 1040,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:ender_pearl, price=25"
+        },
+        "next": {}
+      },
+      {
+        "id": "cs4",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 1200,
+        "props": {
+          "slot": "14",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf4"
+          ]
+        }
+      },
+      {
+        "id": "cf4",
+        "type": "call_function",
+        "x": 320,
+        "y": 1200,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:iron_pickaxe, price=30"
+        },
+        "next": {}
+      },
+      {
+        "id": "cs5",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 1360,
+        "props": {
+          "slot": "15",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf5"
+          ]
+        }
+      },
+      {
+        "id": "cf5",
+        "type": "call_function",
+        "x": 320,
+        "y": 1360,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:shield, price=30"
+        },
+        "next": {}
+      },
+      {
+        "id": "cs6",
+        "type": "on_slot_click",
+        "x": 40,
+        "y": 1520,
+        "props": {
+          "slot": "16",
+          "button": "any"
+        },
+        "next": {
+          "then": [
+            "cf6"
+          ]
+        }
+      },
+      {
+        "id": "cf6",
+        "type": "call_function",
+        "x": 320,
+        "y": 1520,
+        "props": {
+          "name": "buy",
+          "args": "item=minecraft:totem_of_undying, price=500"
+        },
+        "next": {}
+      },
+      {
+        "id": "b1",
+        "type": "on_function",
+        "x": 40,
+        "y": 1680,
+        "props": {
+          "name": "buy"
+        },
+        "next": {
+          "then": [
+            "b2"
+          ]
+        }
+      },
+      {
+        "id": "b2",
+        "type": "if_var",
+        "x": 320,
+        "y": 1680,
+        "props": {
+          "name": "coins",
+          "op": ">=",
+          "value": "{price}"
+        },
+        "next": {
+          "true": [
+            "b3"
+          ],
+          "false": [
+            "b6"
+          ]
+        }
+      },
+      {
+        "id": "b3",
+        "type": "add_var",
+        "x": 600,
+        "y": 1640,
+        "props": {
+          "name": "coins",
+          "amount": "-{price}"
+        },
+        "next": {
+          "then": [
+            "b4"
+          ]
+        }
+      },
+      {
+        "id": "b4",
+        "type": "give_item",
+        "x": 880,
+        "y": 1640,
+        "props": {
+          "item": "{item}",
+          "amount": "1"
+        },
+        "next": {
+          "then": [
+            "b5"
+          ]
+        }
+      },
+      {
+        "id": "b5",
+        "type": "popup",
+        "x": 1160,
+        "y": 1640,
+        "props": {
+          "text": "<red>-{price} coins",
+          "at": "front",
+          "ticks": "26",
+          "rise": "0.5",
+          "scale": "1",
+          "who": "player"
+        },
+        "next": {}
+      },
+      {
+        "id": "b6",
+        "type": "sound",
+        "x": 600,
+        "y": 1840,
+        "props": {
+          "sound": "minecraft:entity.villager.no",
+          "volume": "0.6",
+          "pitch": "1"
+        },
+        "next": {}
+      }
+    ]
+  },
+  "tabs": {},
+  "commands": [],
+  "slots": [
+    {
+      "slot": 10,
+      "item": "minecraft:diamond_sword",
+      "amount": 1,
+      "name": "<white>Diamond Sword",
+      "lore": "<gray>Sharp and shiny\n\n<gray>Price: <gold>120 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 11,
+      "item": "minecraft:bow",
+      "amount": 1,
+      "name": "<white>Bow",
+      "lore": "<gray>Pew pew\n\n<gray>Price: <gold>40 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 12,
+      "item": "minecraft:golden_apple",
+      "amount": 1,
+      "name": "<white>Golden Apple",
+      "lore": "<gray>Instant health\n\n<gray>Price: <gold>50 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 13,
+      "item": "minecraft:ender_pearl",
+      "amount": 1,
+      "name": "<white>Ender Pearl",
+      "lore": "<gray>Teleport a short way\n\n<gray>Price: <gold>25 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 14,
+      "item": "minecraft:iron_pickaxe",
+      "amount": 1,
+      "name": "<white>Iron Pickaxe",
+      "lore": "<gray>Mines faster\n\n<gray>Price: <gold>30 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 15,
+      "item": "minecraft:shield",
+      "amount": 1,
+      "name": "<white>Shield",
+      "lore": "<gray>Blocks attacks\n\n<gray>Price: <gold>30 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 16,
+      "item": "minecraft:totem_of_undying",
+      "amount": 1,
+      "name": "<white>Totem Of Undying",
+      "lore": "<gray>Cheat death once\n\n<gray>Price: <gold>500 coins\n<yellow>Click to buy",
+      "glint": false,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [],
+      "frameTicks": 10
+    },
+    {
+      "slot": 22,
+      "item": "minecraft:chest",
+      "amount": 1,
+      "name": "<gold>Daily reward",
+      "lore": "<gray>Free coins every day\n<yellow>Click to claim",
+      "glint": true,
+      "itemModel": "",
+      "headOwner": "",
+      "blank": false,
+      "hideTooltip": false,
+      "frames": [
+        "minecraft:chest",
+        "minecraft:ender_chest",
+        "minecraft:trapped_chest",
+        "minecraft:ender_chest"
+      ],
+      "frameTicks": 10
+    }
+  ]
+}

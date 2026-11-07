@@ -44,7 +44,8 @@ import java.util.concurrent.TimeUnit;
 public final class SilentUI extends JavaPlugin {
 
     private static final UUID PACK_ID = UUID.nameUUIDFromBytes("silentui:pack".getBytes(StandardCharsets.UTF_8));
-    private static final String[] EXAMPLES = {"example_menu.json", "example_shop.json", "example_hud.json", "example_board.json"};
+    private static final String[] EXAMPLES = {"example_menu.json", "example_shop.json", "example_hud.json", "example_board.json",
+            "example_chest.json", "example_hologram.json", "example_path.json"};
 
     private UiRegistry registry;
     private UiManager manager;

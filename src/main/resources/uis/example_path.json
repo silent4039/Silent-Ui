@@ -1,0 +1,597 @@
+{
+  "format": 1,
+  "id": "example_path",
+  "name": "Guide Arrows",
+  "type": "world",
+  "canvas": {
+    "width": 64,
+    "height": 360
+  },
+  "settings": {
+    "command": "",
+    "permission": "",
+    "freeze": true,
+    "closeOnSneak": true,
+    "clampCursor": true,
+    "dim": 0,
+    "cursorSprite": "",
+    "screenSize": 1,
+    "autoShow": false,
+    "worldScale": 1.5,
+    "billboard": "fixed",
+    "perPlayer": false,
+    "viewRange": 40,
+    "tilt": 90,
+    "rows": 6,
+    "guiTop": 0,
+    "title": ""
+  },
+  "sprites": [
+    {
+      "id": "chevron",
+      "data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAUCAYAAADLP76nAAABUUlEQVR4AdTRi42DMBAA0YSu6I5CKIhC6IO7h24l2IDDN8ohjRw7Bs9A9bjxGn6vpmmGG4943BIw/F0hLgIxv3K8PID7muAdEZcFEMeafKyLQMzPjqcDSGOviAjsvS/vPxXwTrzrukff9/nM2fxsxKEA4piZTCbEUdf1s23bpwhMtsx+isBsceNkVwBplJ4d4uRjnwiUIuwVAb+3simANEoPJY6peN4fEVeGvA3YI16SjxgREIFYXxq3fI3VAOJYenCsxRvfIh73xCgCWyJKIS8BpBEHLY3EcUQ8Py8ijobMAvaIXyEfMSIgArG+NOavMQYQx9IN1rxtkIa1OxABEVg7QwT8X5XEbfiEuHOmiEApwn4R4xcwyRDHnW88n5nnEVEKeQkgDeLID/30XAREIJ8/C/gm8SwqAjliDCCOb3jjWTzPIyJCqhD/D/IRIwIifgAAAP//VdnDrwAAAAZJREFUAwBR7k23dn3pZAAAAABJRU5ErkJggg==",
+      "width": 48,
+      "height": 20
+    }
+  ],
+  "elements": [
+    {
+      "id": "arrow1",
+      "name": "Arrow 1",
+      "type": "image",
+      "x": 8,
+      "y": 300,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    },
+    {
+      "id": "arrow2",
+      "name": "Arrow 2",
+      "type": "image",
+      "x": 8,
+      "y": 254,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    },
+    {
+      "id": "arrow3",
+      "name": "Arrow 3",
+      "type": "image",
+      "x": 8,
+      "y": 208,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    },
+    {
+      "id": "arrow4",
+      "name": "Arrow 4",
+      "type": "image",
+      "x": 8,
+      "y": 162,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    },
+    {
+      "id": "arrow5",
+      "name": "Arrow 5",
+      "type": "image",
+      "x": 8,
+      "y": 116,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    },
+    {
+      "id": "arrow6",
+      "name": "Arrow 6",
+      "type": "image",
+      "x": 8,
+      "y": 70,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    },
+    {
+      "id": "arrow7",
+      "name": "Arrow 7",
+      "type": "image",
+      "x": 8,
+      "y": 24,
+      "w": 48,
+      "h": 20,
+      "rotation": 0,
+      "opacity": 1,
+      "scale": 1,
+      "visible": true,
+      "blocked": true,
+      "anchor": "center",
+      "fill": "#cfcfcf",
+      "fillEnabled": false,
+      "sprite": "chevron",
+      "text": "",
+      "textColor": "#ffffff",
+      "textSize": 1,
+      "align": "center",
+      "shadow": true,
+      "hoverFill": "",
+      "hoverSprite": "",
+      "hoverTextColor": "",
+      "hoverScale": 1,
+      "item": "minecraft:diamond",
+      "headOwner": "",
+      "value": "50",
+      "max": "100",
+      "barColor": "#ffffff",
+      "barSprite": "",
+      "placeholder": "Type...",
+      "group": "",
+      "tabFor": "",
+      "activeFill": "",
+      "activeSprite": "",
+      "activeTextColor": "",
+      "itemModel": "",
+      "glint": false,
+      "spin": 0,
+      "rotatable": false,
+      "textBg": "",
+      "seeThrough": false,
+      "tintSprite": true,
+      "tooltip": ""
+    }
+  ],
+  "animations": [
+    {
+      "id": "anhcqzqf",
+      "name": "lights",
+      "length": 42,
+      "loop": true,
+      "autoplay": true,
+      "tracks": [
+        {
+          "element": "arrow1",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 5,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 10,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        },
+        {
+          "element": "arrow2",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 3,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 8,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 13,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        },
+        {
+          "element": "arrow3",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 6,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 11,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 16,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        },
+        {
+          "element": "arrow4",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 9,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 14,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 19,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        },
+        {
+          "element": "arrow5",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 12,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 17,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 22,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        },
+        {
+          "element": "arrow6",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 15,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 20,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 25,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        },
+        {
+          "element": "arrow7",
+          "property": "fill",
+          "keys": [
+            {
+              "t": 0,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 18,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 23,
+              "v": 2733823,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 28,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            },
+            {
+              "t": 42,
+              "v": 13619151,
+              "ease": "ease-in-out"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "script": {
+    "nodes": []
+  },
+  "tabs": {},
+  "commands": [],
+  "slots": []
+}
