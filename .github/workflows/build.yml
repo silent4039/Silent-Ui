@@ -47,6 +47,17 @@ jobs:
           name: SilentUI
           path: target/SilentUI-*.jar
 
+      - name: Publish jar to builds/<branch>
+        # A plain git branch is the easiest download for tools that can't reach GitHub's artifact storage.
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          BR="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          mkdir -p /tmp/out && cp target/SilentUI-*.jar /tmp/out/
+          cd /tmp/out && git init -q && git checkout -q -b out
+          git config user.name "ci" && git config user.email "ci@users.noreply.github.com"
+          git add . && git commit -q -m "SilentUI jar for ${BR} at ${GITHUB_SHA::7}"
+          git push -f -q "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "out:refs/heads/builds/${BR}"
+
       - name: Publish "latest" release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
