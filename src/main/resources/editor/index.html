@@ -1486,7 +1486,7 @@ function layersPanel() {
       h('div', {class: 'lab', style: {marginBottom: '4px'}}, set + ' · opens on ', h('b', {style: {color: 'var(--text)'}}, (doc().tabs || {})[set] || pages[0])),
       h('div', {style: {display: 'flex', gap: '4px', flexWrap: 'wrap'}}, ...pages.map(pg => h('button', {class: 'btn sm' + (viewPage(set) === pg ? ' primary' : ''), title: 'Edit this page · double-click to make it the default',
         onclick: () => setViewPage(set, pg), ondblclick: () => mutate(d => { d.tabs = d.tabs || {}; d.tabs[set] = pg; })}, pg))),
-      S.sel.length ? h('div', {style: {display: 'flex', gap: '4px', marginTop: '6px'}},
+      S.sel.length ? h('div', {style: {display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap'}},
         h('button', {class: 'btn sm ghost', onclick: () => putOnPage(set, viewPage(set))}, 'Put selection on “' + viewPage(set) + '”'),
         h('button', {class: 'btn sm ghost', onclick: () => putOnPage(set, '')}, 'Make always visible')) : null)),
     Object.keys(sets).length ? null : h('p', {style: {margin: 0, color: 'var(--faint)', fontSize: '12px'}}, 'Pages that share one spot, switched by tab buttons.'));
@@ -3104,12 +3104,12 @@ function tplShop() {
     node('on_open', 40, 40, {__id: 'o1'}, {then: ['o2']}),
     node('if_var', 320, 40, {__id: 'o2', name: 'coins', op: '==', value: ''}, {true: ['o3']}),
     node('set_var', 600, 40, {__id: 'o3', name: 'coins', value: '250'}),
-    node('on_click', 40, 220, {__id: 'c1', element: 'close'}, {then: ['c2']}),
-    node('close_ui', 320, 220, {__id: 'c2'}),
-    node('on_hover_enter', 40, 360, {__id: 'h1'}, {then: ['h2']}),
-    node('sound', 320, 360, {__id: 'h2', sound: 'minecraft:block.note_block.hat', volume: '0.3', pitch: '1.8'})
+    node('on_click', 40, 280, {__id: 'c1', element: 'close'}, {then: ['c2']}),
+    node('close_ui', 320, 280, {__id: 'c2'}),
+    node('on_hover_enter', 40, 440, {__id: 'h1'}, {then: ['h2']}),
+    node('sound', 320, 440, {__id: 'h2', sound: 'minecraft:block.note_block.hat', volume: '0.3', pitch: '1.8'})
   ];
-  let ny = 560;
+  let ny = 700;
   Object.entries(cats).forEach(([cat, items], ci) => {
     E.push(el('button', {id: 'tab_' + cat, name: cat + ' tab', text: cat[0].toUpperCase() + cat.slice(1), tabFor: 'shop/' + cat,
       x: X + 14 + ci * 74, y: Y + 32, w: 70, h: 18, fill: '#1e1e1e', textColor: '#bdbdbd', activeFill: '#ffffff', activeTextColor: '#000000', hoverFill: '#2a2a2a', hoverScale: 1, shadow: false}));
@@ -3122,7 +3122,7 @@ function tplShop() {
       E.push(el('text', {id: `p_${cat}_${i}`, name: id + ' price', group: g, x: sx + 42, y: sy + 42, w: 42, h: 9, text: '<white>' + price + '</white> <gray>c</gray>', textSize: .7, align: 'left', blocked: true}));
       nodes.push(node('on_click', 40, ny, {__id: `k_${cat}_${i}`, element: `s_${cat}_${i}`}, {then: [`f_${cat}_${i}`]}));
       nodes.push(node('call_function', 320, ny, {__id: `f_${cat}_${i}`, name: 'buy', args: `item=minecraft:${id}, price=${price}, label=${id.replace(/_/g, ' ')}`}));
-      ny += 150;
+      ny += 170;
     });
   });
   nodes.push(node('on_function', 40, ny, {__id: 'b1', name: 'buy'}, {then: ['b2']}));
