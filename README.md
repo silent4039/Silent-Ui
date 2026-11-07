@@ -42,6 +42,12 @@ Already using ItemsAdder, Nexo, Oraxen or your own pack? Set `resource-pack.send
 
 When the editor is opened from your server it connects automatically (the chip in the top bar shows **Server · MC 1.21.x**). That unlocks **Assets** (items, textures, skins) and server-side presets.
 
+New to it? The editor opens a **tutorial** on first visit (the **?** button replays it).
+
+- **Library** (`L`): a drawer with every item sorted into Armour, Weapons, Tools, Food, Gems & ores, Blocks, Potions, Spawn eggs and Discs, plus your sprites. Drag anything onto the canvas: items become 3D items (flat sprites on HUDs, or hold Alt). PNG files dragged from your computer become sprites where you drop them.
+- **Placeholders** (`{ }` button): every placeholder with a description, including the variables, command arguments and function arguments your UI defines, and common PlaceholderAPI ones. Insert types it into the text box you were editing.
+- **Groups:** select elements and press `Ctrl+G` (`Ctrl+Shift+G` to ungroup). Clicking a member selects the whole group, double-click selects one element. Groups are folders in Layers (hide, rename, ungroup) and scripts can show or hide them.
+
 Shortcuts: `V R T B I N G E H M` tools · `A` timeline · `K` scripts · `P` preview · `Ctrl+Z` undo · `Alt+drag` duplicate · `?` help.
 
 ## In-game editor

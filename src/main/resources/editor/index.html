@@ -237,6 +237,41 @@ details.adv>summary::-webkit-details-marker{display:none}
 .logic-note{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);padding:20px}
 .logic-note b{display:block;color:var(--text);font-size:16px;margin-bottom:6px}
 
+/* library drawer, placeholders, tutorial, groups */
+#library{position:absolute;left:0;top:38px;bottom:0;width:272px;z-index:15;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;box-shadow:12px 0 30px rgba(0,0,0,.35)}
+#library .mtabs{margin:0;padding:0 8px}
+#library .mtabs button:last-child{font-size:18px;line-height:1}
+.lib-body{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.lib-cats{display:flex;flex-wrap:wrap;gap:4px}
+.lib-cats button{border:1px solid var(--line2);background:none;color:var(--muted);border-radius:999px;padding:2px 9px;font-size:11.5px}
+.lib-cats button.on{background:#fff;color:#000;border-color:#fff}
+.lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(48px,1fr));gap:4px}
+.lib-cell{aspect-ratio:1;background:var(--panel2);border:1px solid var(--line);border-radius:7px;display:grid;place-items:center;cursor:grab;padding:4px}
+.lib-cell:hover{border-color:#fff}
+.lib-cell img{max-width:100%;max-height:100%;image-rendering:pixelated}
+#stage.dropping{outline:2px dashed #fff;outline-offset:-6px}
+.ph-list{display:flex;flex-direction:column;gap:12px;max-height:56vh;overflow:auto}
+.ph-group h5{margin:0 0 6px;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--muted)}
+.ph-row{display:grid;grid-template-columns:minmax(150px,auto) minmax(0,1fr) auto auto auto;gap:8px;align-items:center;padding:5px 6px;border-radius:7px}
+.ph-row:hover{background:var(--panel2)}
+.ph-row code{font:12px var(--mono);color:var(--text);background:var(--raise);border:1px solid var(--line2);border-radius:5px;padding:2px 6px;justify-self:start}
+.ph-row .d{color:var(--muted);font-size:12.5px;min-width:0}
+.ph-row .ex{color:var(--faint);font:11px var(--mono);white-space:nowrap}
+#tutorial{position:fixed;right:16px;bottom:36px;width:min(340px,calc(100% - 32px));background:var(--panel);border:1px solid #fff;border-radius:12px;padding:12px 14px 14px;z-index:150;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+#tutorial .tut-top{display:flex;justify-content:space-between;align-items:center;font:11px var(--mono);color:var(--muted)}
+#tutorial .tut-bar{height:2px;background:var(--line2);border-radius:2px;margin:6px 0 10px}
+#tutorial .tut-bar i{display:block;height:100%;background:#fff;border-radius:2px}
+#tutorial h3{margin:0 0 6px;font-size:15px}
+#tutorial p{margin:0 0 12px;color:var(--muted);line-height:1.5}
+#tutorial .tut-acts{display:flex;gap:6px;justify-content:space-between}
+#tutorial .tut-acts .btn.primary{margin-left:auto}
+.tut-hl{outline:2px solid #fff!important;outline-offset:2px;animation:tutpulse 1.4s ease-in-out infinite}
+@keyframes tutpulse{50%{outline-color:rgba(255,255,255,.25)}}
+.layer.folder .nm{font-weight:600}
+.layer.child{padding-left:26px}
+.layer .mini{font-size:12px}
+@media (max-width: 860px){#library{width:min(272px,85vw)}}
+
 /* modal + toast */
 .modal-bg{position:fixed;inset:0;background:rgba(5,4,8,.66);display:grid;place-items:center;z-index:100;padding:16px}
 .modal{width:min(620px,100%);max-height:calc(100% - 20px);overflow:auto;background:var(--panel);border:1px solid var(--line2);border-radius:14px;box-shadow:0 30px 70px rgba(0,0,0,.6)}
@@ -390,7 +425,9 @@ const ICON = {
   model: '<circle cx="12" cy="5" r="2.5"/><path d="M9 9h6l1 6h-2l-1 6h-2l-1-6H8z"/>',
   assets: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="m3 16 5-5 4 4 3-3 6 6"/><circle cx="15.5" cy="8.5" r="1.5"/>',
   presets: '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><path d="M17 14v6M14 17h6"/>',
-  commands: '<path d="m5 8 4 4-4 4M11 17h8"/>'
+  commands: '<path d="m5 8 4 4-4 4M11 17h8"/>',
+  library: '<path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="m16 5 3.5-.8 3 15.6-3.5.8z"/>',
+  braces: '<path d="M8 4c-2 0-2 1-2 3v2c0 1.5-1 2.5-2 3 1 .5 2 1.5 2 3v2c0 2 0 3 2 3M16 4c2 0 2 1 2 3v2c0 1.5 1 2.5 2 3-1 .5-2 1.5-2 3v2c0 2 0 3-2 3"/>'
 };
 const svg = (name, extra = '') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" ${extra}>${ICON[name] || ''}</svg>`;
 
@@ -1065,8 +1102,14 @@ stage.addEventListener('pointerdown', ev => {
   }
   const e = hitTest(p);
   if (e) {
-    if (ev.shiftKey) S.sel = S.sel.includes(e.id) ? S.sel.filter(i => i !== e.id) : [...S.sel, e.id];
-    else if (!S.sel.includes(e.id)) S.sel = [e.id];
+    const now = performance.now();
+    const dbl = !ev.shiftKey && S._lastDown && S._lastDown.id === e.id && now - S._lastDown.t < 400;
+    S._lastDown = {id: e.id, t: now};
+    if (dbl) { S._lastDown = null; stage.releasePointerCapture?.(ev.pointerId); handleDouble(e); return; }
+    const g = selGroup(e);
+    const members = g && !(ev.ctrlKey || ev.metaKey) ? groupMembers(g).filter(x => !x.locked).map(x => x.id) : [e.id];
+    if (ev.shiftKey) S.sel = S.sel.includes(e.id) ? S.sel.filter(i => !members.includes(i)) : [...new Set([...S.sel, ...members])];
+    else if (!S.sel.includes(e.id)) S.sel = members;
     if (ev.altKey) { // alt-drag duplicates
       pushUndo();
       const copies = selected().map(o => Object.assign(clone(o), {id: rid(), name: o.name + ' copy'}));
@@ -1158,13 +1201,14 @@ const endDrag = ev => {
 };
 stage.addEventListener('pointerup', endDrag);
 stage.addEventListener('pointercancel', endDrag);
-stage.addEventListener('dblclick', ev => {
-  const e = hitTest(toCanvas(ev));
-  if (e && e.type !== 'image' && e.type !== 'item' && e.type !== 'head' && e.type !== 'rect') {
+/** Double click: step into a group, or jump to the text box of a text element. */
+function handleDouble(e) {
+  if (selGroup(e) && S.sel.length > 1 && S.sel.includes(e.id)) { S.sel = [e.id]; render(); return; }
+  if (e.type !== 'image' && e.type !== 'item' && e.type !== 'head' && e.type !== 'rect' && e.type !== 'model') {
     S.sel = [e.id]; S.side = 'design'; render();
     setTimeout(() => { const t = $('#f_text'); if (t) { t.focus(); t.select(); } }, 0);
-  }
-});
+  } else { S.sel = [e.id]; render(); }
+}
 function bbox(list) {
   const x0 = Math.min(...list.map(b => b.x)), y0 = Math.min(...list.map(b => b.y));
   const x1 = Math.max(...list.map(b => b.x + b.w)), y1 = Math.max(...list.map(b => b.y + b.h));
@@ -1348,14 +1392,16 @@ function designPanel(e) {
     field('Sprite', spriteSelect(() => e.sprite, x => e.sprite = x, 'f_sprite')),
     h('p', {style: {margin: '2px 0 0', color: 'var(--faint)', fontSize: '11.5px'}}, 'A sprite replaces the colour. Make rounded panels in Sprites → Generate.')));
   if (hasText) parts.push(sec('Text',
-    field('Text', textInput(() => e.text, x => e.text = x, {area: true, id: 'f_text', ph: 'Supports <#ff8fd1>colours</#ff8fd1>, <bold>, {player}, %papi%'})),
+    field('Text', textInput(() => e.text, x => e.text = x, {area: true, id: 'f_text', ph: 'Supports <white>colours</white>, <bold>, {player}, %papi%'})),
+    h('div', {class: 'row'}, h('span'), h('button', {class: 'btn sm', style: {justifySelf: 'start'}, onclick: () => { S.lastField = $('#f_text'); openPlaceholders(); }}, '{ } Insert placeholder')),
     field('Colour', colorInput(() => e.textColor, x => e.textColor = x)),
     h('div', {class: 'row2'}, numInput('Size', () => e.textSize, x => e.textSize = x, {step: .05, min: .1}), h('div')),
     field('Align', seg([['left', 'Left'], ['center', 'Centre'], ['right', 'Right']], () => e.align, x => e.align = x)),
     checkInput('Text shadow', () => e.shadow, x => e.shadow = x),
     e.type === 'input' ? field('Placeholder', textInput(() => e.placeholder, x => e.placeholder = x)) : null));
   if (e.type === 'progress') parts.push(sec('Progress',
-    field('Value', textInput(() => e.value, x => e.value = x, {ph: '{var:xp} or %papi%'})),
+    field('Value', textInput(() => e.value, x => e.value = x, {ph: '{var:xp} or %papi%', id: 'f_value'})),
+    h('div', {class: 'row'}, h('span'), h('button', {class: 'btn sm', style: {justifySelf: 'start'}, onclick: () => { S.lastField = $('#f_value'); openPlaceholders(); }}, '{ } Insert placeholder')),
     field('Max', textInput(() => e.max, x => e.max = x)),
     field('Bar colour', colorInput(() => e.barColor, x => e.barColor = x)),
     field('Bar sprite', spriteSelect(() => e.barSprite, x => e.barSprite = x))));
@@ -1390,6 +1436,8 @@ function multiPanel(list) {
           h('button', {class: 'btn sm', onclick: () => alignSel(k)}, l)),
         h('button', {class: 'btn sm', onclick: () => distribute('x')}, 'Space evenly ↔'),
         h('button', {class: 'btn sm', onclick: () => distribute('y')}, 'Space evenly ↕'),
+        list.some(e => selGroup(e)) ? h('button', {class: 'btn sm', onclick: ungroupSel}, 'Ungroup') : null,
+        h('button', {class: 'btn sm primary', onclick: groupSel}, 'Group (Ctrl+G)'),
         h('button', {class: 'btn sm', onclick: duplicate}, 'Duplicate'),
         h('button', {class: 'btn sm danger', onclick: removeSel}, 'Delete'))),
     sec('Batch',
@@ -1438,12 +1486,12 @@ function layersPanel() {
   const items = [...doc().elements].reverse();
   if (!items.length) return h('div', {}, h('div', {class: 'empty'}, 'No layers yet. Pick a tool on the left and drag on the canvas, or insert a preset.'), h('div', {style: {textAlign: 'center'}}, h('button', {class: 'btn', onclick: openPresets}, 'Browse presets')));
   let dragId = null;
-  for (const e of items) {
-    const li = h('li', {class: 'layer' + (S.sel.includes(e.id) ? ' on' : ''), draggable: 'true', 'data-id': e.id},
+  const makeRow = (e, indent) => {
+    const li = h('li', {class: 'layer' + (S.sel.includes(e.id) ? ' on' : '') + (indent ? ' child' : ''), draggable: 'true', 'data-id': e.id},
       h('button', {class: 'mini' + (e.visible ? '' : ' off'), title: e.visible ? 'Hide' : 'Show', html: svg(e.visible ? 'eye' : 'eyeoff'),
         onclick: ev => { ev.stopPropagation(); mutate(() => e.visible = !e.visible); }}),
       h('span', {class: 'nm', style: {opacity: offPage(e) ? .45 : 1}}, e.name),
-      e.group ? h('span', {class: 'chip', title: 'Group'}, e.group) : null,
+      e.group && !selGroup(e) ? h('span', {class: 'chip', title: 'Tab page'}, e.group) : null,
       h('span', {class: 'ty'}, e.type),
       h('button', {class: 'mini' + (e.locked ? ' off' : ''), title: e.locked ? 'Unlock' : 'Lock', html: svg(e.locked ? 'lock' : 'unlock'),
         onclick: ev => { ev.stopPropagation(); mutate(() => e.locked = !e.locked); }}));
@@ -1478,7 +1526,34 @@ function layersPanel() {
         d.elements.splice(above ? idx + 1 : idx, 0, moving);
       });
     });
-    list.append(li);
+    return li;
+  };
+  // groups become folders (shown where their top-most member is)
+  const done = new Set();
+  S.collapsed = S.collapsed || {};
+  for (const e of items) {
+    const g = selGroup(e);
+    if (!g) { list.append(makeRow(e, false)); continue; }
+    if (done.has(g)) continue;
+    done.add(g);
+    const members = items.filter(x => x.group === g);
+    const key = doc().id + ':' + g, closed = !!S.collapsed[key];
+    const allOn = members.every(m => S.sel.includes(m.id)), anyVisible = members.some(m => m.visible);
+    const name = h('span', {class: 'nm'}, groupName(g));
+    const folder = h('li', {class: 'layer folder' + (allOn ? ' on' : '')},
+      h('button', {class: 'mini', title: closed ? 'Expand' : 'Collapse', onclick: ev => { ev.stopPropagation(); S.collapsed[key] = !closed; renderPanel(); }}, closed ? '▸' : '▾'),
+      h('button', {class: 'mini' + (anyVisible ? '' : ' off'), title: anyVisible ? 'Hide group' : 'Show group', html: svg(anyVisible ? 'eye' : 'eyeoff'),
+        onclick: ev => { ev.stopPropagation(); mutate(() => members.forEach(m => m.visible = !anyVisible)); }}),
+      name, h('span', {class: 'ty'}, members.length + ' items'),
+      h('button', {class: 'mini', title: 'Ungroup', onclick: ev => { ev.stopPropagation(); S.sel = members.map(m => m.id); ungroupSel(); }}, '⊟'));
+    folder.addEventListener('click', ev => { S.sel = ev.shiftKey ? [...new Set([...S.sel, ...members.map(m => m.id)])] : members.map(m => m.id); render(); });
+    folder.addEventListener('dblclick', () => {
+      const inp = h('input', {class: 'inp', value: groupName(g)});
+      name.replaceWith(inp); inp.focus(); inp.select();
+      inp.addEventListener('blur', () => renameGroup(g, inp.value)); inp.addEventListener('keydown', k => { if (k.key === 'Enter') inp.blur(); });
+    });
+    list.append(folder);
+    if (!closed) for (const m of members) list.append(makeRow(m, true));
   }
   const sets = tabsets();
   const tabsBox = h('div', {class: 'sec'}, h('h4', {}, 'Tab sets', h('button', {class: 'btn sm', onclick: openNewTabset}, '+ Tab set')),
@@ -1579,12 +1654,15 @@ function renderRail() {
   r.replaceChildren(
     ...TOOLS.map(([id, title, icon]) => h('button', {class: 'icon-btn' + (S.tool === id ? ' on' : ''), title, html: svg(icon), onclick: () => setTool(id)})),
     h('div', {class: 'sep'}),
-    h('button', {class: 'icon-btn', title: 'Assets: sprites, items, textures, skins', html: svg('assets'), onclick: () => openAssets()}),
-    h('button', {class: 'icon-btn', title: 'Presets', html: svg('presets'), onclick: openPresets}),
-    h('button', {class: 'icon-btn', title: 'Commands & functions', html: svg('commands'), onclick: openCommands}),
-    h('button', {class: 'icon-btn' + (S.dock ? ' on' : ''), title: 'Animation timeline (A)', html: svg('timeline'), onclick: toggleDock}),
-    h('button', {class: 'icon-btn' + (S.scriptOpen ? ' on' : ''), title: 'Scripts (K)', html: svg('script'), onclick: toggleScript}),
+    h('button', {class: 'icon-btn' + (S.library ? ' on' : ''), 'data-rail': 'library', title: 'Library: drag items and sprites onto the canvas (L)', html: svg('library'), onclick: () => toggleLibrary()}),
+    h('button', {class: 'icon-btn', 'data-rail': 'assets', title: 'Assets: sprites, items, textures, skins', html: svg('assets'), onclick: () => openAssets()}),
+    h('button', {class: 'icon-btn', 'data-rail': 'presets', title: 'Presets', html: svg('presets'), onclick: openPresets}),
+    h('button', {class: 'icon-btn', 'data-rail': 'placeholders', title: 'Placeholders', html: svg('braces'), onclick: openPlaceholders}),
+    h('button', {class: 'icon-btn', 'data-rail': 'commands', title: 'Commands & functions', html: svg('commands'), onclick: openCommands}),
+    h('button', {class: 'icon-btn' + (S.dock ? ' on' : ''), 'data-rail': 'timeline', title: 'Animation timeline (A)', html: svg('timeline'), onclick: toggleDock}),
+    h('button', {class: 'icon-btn' + (S.scriptOpen ? ' on' : ''), 'data-rail': 'scripts', title: 'Scripts (K)', html: svg('script'), onclick: toggleScript}),
     h('div', {class: 'grow'}),
+    h('button', {class: 'icon-btn', 'data-rail': 'tutorial', title: 'Tutorial', onclick: () => startTutorial(0)}, '?'),
     h('button', {class: 'icon-btn', title: 'Code (JSON)', html: svg('code'), onclick: openCode}));
 }
 const MENUS = {
@@ -1595,10 +1673,11 @@ const MENUS = {
   Edit: [['Undo', undo, 'Ctrl+Z'], ['Redo', redo, 'Ctrl+Shift+Z'], '-', ['Copy', copySel, 'Ctrl+C'], ['Paste', paste, 'Ctrl+V'], ['Duplicate', duplicate, 'Ctrl+D'], ['Delete', removeSel, 'Del'], '-',
     ['Select all', () => { S.sel = els().filter(e => !e.locked).map(e => e.id); render(); }, 'Ctrl+A']],
   Layer: [['Bring to front', () => arrange('top'), ']'], ['Bring forward', () => arrange('up')], ['Send backward', () => arrange('down')], ['Send to back', () => arrange('bottom'), '['], '-',
+    ['Group', groupSel, 'Ctrl+G'], ['Ungroup', ungroupSel, 'Ctrl+Shift+G'], '-',
     ['Show / hide', () => mutate(() => selected().forEach(e => e.visible = !e.visible)), 'Ctrl+H'], ['Lock / unlock', () => mutate(() => selected().forEach(e => e.locked = !e.locked)), 'Ctrl+L']],
   Insert: [['Item…', () => pickItem(id => addItemEl(id.replace('minecraft:', '')))], ['Player head', () => addElement('head')], ['Player model', () => addElement('model')], '-',
     ['Preset…', openPresets], ['Tab set…', openNewTabset], ['Command…', openCommands]],
-  Window: [['Assets', () => openAssets()], ['Presets', openPresets], ['Commands & functions', openCommands], ['Timeline', toggleDock, 'A'], ['Scripts', toggleScript, 'K'], ['Code (JSON)', openCode], '-', ['Preview', startPreview, 'P'], ['Fit canvas', fit, 'Shift+1'], ['Help', openHelp, '?']]
+  Window: [['Library (drag & drop)', () => toggleLibrary(), 'L'], ['Placeholders', openPlaceholders], ['Tutorial', () => startTutorial(0)], '-', ['Assets', () => openAssets()], ['Presets', openPresets], ['Commands & functions', openCommands], ['Timeline', toggleDock, 'A'], ['Scripts', toggleScript, 'K'], ['Code (JSON)', openCode], '-', ['Preview', startPreview, 'P'], ['Fit canvas', fit, 'Shift+1'], ['Help', openHelp, '?']]
 };
 function renderMenus() {
   const m = $('#menus');
@@ -2123,12 +2202,13 @@ function openCode() {
 function openHelp() {
   const rows = [['V R T B I N G E H', 'Tools: select, rectangle, text, button, image, input, progress, item, head'], ['Drag on canvas', 'Draw with the active tool (hold Shift to keep the tool)'],
     ['Shift + drag', 'Lock axis / keep ratio / snap rotation to 15°'], ['Alt + drag', 'Duplicate while moving'], ['Arrows', 'Nudge 1px (Shift: 10px)'], ['Space + drag, scroll', 'Pan'],
-    ['Ctrl + scroll', 'Zoom'], ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl+C / V / D', 'Copy / paste / duplicate'], ['[ and ]', 'Send to back / bring to front'],
+    ['Ctrl + scroll', 'Zoom'], ['Ctrl+Z / Ctrl+Shift+Z', 'Undo / redo'], ['Ctrl+G / Ctrl+Shift+G', 'Group / ungroup'], ['L', 'Library (drag & drop)'], ['Ctrl+C / V / D', 'Copy / paste / duplicate'], ['[ and ]', 'Send to back / bring to front'],
     ['A / K / P', 'Timeline / scripts / preview'], ['Ctrl+E', 'Export']];
   modal('Silent UI editor', [
     h('p', {}, 'Build the UI here, export it (or push it), and the plugin draws it in game with display entities (screens and world UIs) or bossbar glyphs (HUDs). No client mods.'),
     h('div', {}, ...rows.map(([k, v]) => h('div', {class: 'row', style: {gridTemplateColumns: '170px 1fr'}}, h('code', {style: {color: 'var(--accent)'}}, k), h('span', {}, v)))),
-    h('p', {}, 'Placeholders: {player} {level} {health} {online} {time} {date} {var:name} and any %placeholderapi% value. Text accepts MiniMessage tags like <#ff8fd1>, <bold>, <gray>.')
+    h('p', {}, 'Placeholders: {player} {level} {health} {online} {time} {date} {var:name} and any %placeholderapi% value. Text accepts MiniMessage tags like <white>, <bold>, <gray>.'),
+    h('div', {class: 'toolbar'}, h('button', {class: 'btn primary', onclick: () => { $$('.modal-bg').forEach(x => x.remove()); startTutorial(0); }}, 'Start the tutorial'), h('button', {class: 'btn', onclick: () => { $$('.modal-bg').forEach(x => x.remove()); openPlaceholders(); }}, 'All placeholders'))
   ]);
 }
 
@@ -2472,6 +2552,7 @@ document.addEventListener('keydown', ev => {
   if (k === ' ' && !S.scriptOpen) { if (S.dock && document.activeElement?.closest?.('#dock')) { ev.preventDefault(); togglePlay(); return; } S.spaceDown = true; stage.style.cursor = 'grab'; ev.preventDefault(); return; }
   if (mod && k === 'z') { ev.preventDefault(); ev.shiftKey ? redo() : undo(); return; }
   if (mod && k === 'y') { ev.preventDefault(); redo(); return; }
+  if (mod && k === 'g') { ev.preventDefault(); ev.shiftKey ? ungroupSel() : groupSel(); return; }
   if (mod && k === 'c') { copySel(); return; }
   if (mod && k === 'v') { paste(); return; }
   if (mod && k === 'd') { ev.preventDefault(); duplicate(); return; }
@@ -2494,6 +2575,7 @@ document.addEventListener('keydown', ev => {
   const tools = {v: 'select', r: 'rect', t: 'text', b: 'button', i: 'image', n: 'input', g: 'progress', e: 'item', h: 'head', m: 'model'};
   if (tools[k]) { setTool(tools[k]); return; }
   if (k === 'a') toggleDock();
+  if (k === 'l') toggleLibrary();
   if (k === 'k') toggleScript();
   if (k === 'p') startPreview();
   if (k === '?') openHelp();
@@ -2512,6 +2594,7 @@ function render(opts = {}) {
   if (opts.keepScript && S.scriptOpen && $('#nodeLayer')) renderNodes(); else renderScript();
   renderStatus();
   renderPageStrip();
+  if (S.library && libTab === 'sprites') renderLibrary();
 }
 $('#undoBtn').addEventListener('click', undo);
 $('#redoBtn').addEventListener('click', redo);
@@ -3141,6 +3224,267 @@ function tplShop() {
     args: [{name: 'category', type: 'choice', choices: ['blocks', 'tools', 'food'], optional: true, def: 'blocks'}]}];
   return d;
 }
+/* ============================================================== placeholders */
+const PH_STATIC = [
+  ['Player', [['{player}', 'Player name'], ['{uuid}', 'Player UUID'], ['{world}', 'World the player is in'], ['{level}', 'XP level'],
+    ['{health}', 'Health, rounded up'], ['{food}', 'Food level'], ['{ping}', 'Ping in ms'], ['{x}', 'Block X'], ['{y}', 'Block Y'], ['{z}', 'Block Z']]],
+  ['Server', [['{online}', 'Players online'], ['{max_players}', 'Player limit'], ['{time}', 'Server time (HH:MM:SS)'], ['{date}', 'Date (YYYY-MM-DD)']]],
+  ['Events', [['{text}', 'What the player typed (When text is typed)'], ['{key}', 'Key that was pressed (When key pressed)'],
+    ['{button}', 'left or right (When clicked)'], ['{element}', 'ID of the clicked element (When clicked)'], ['{args}', 'Everything typed after a command'],
+    ['{arg1}', 'First word after a command (up to {arg9})']]],
+  ['Item field', [['{hand}', "Item in the viewer's main hand"], ['{offhand}', 'Item in the off hand'], ['{helmet}', 'Helmet slot'],
+    ['{chestplate}', 'Chestplate slot'], ['{leggings}', 'Leggings slot'], ['{boots}', 'Boots slot']]],
+  ['PlaceholderAPI', [['%player_name%', 'Player name · expansion: Player'], ['%player_exp%', 'XP progress 0-1 · Player'], ['%player_health%', 'Health · Player'],
+    ['%player_gamemode%', 'Game mode · Player'], ['%vault_eco_balance%', 'Money · Vault + an economy plugin'], ['%vault_eco_balance_formatted%', 'Money, formatted · Vault'],
+    ['%server_online%', 'Players online · Server'], ['%server_tps_1%', 'TPS over 1 minute · Server'], ['%statistic_player_kills%', 'Player kills · Statistic'],
+    ['%statistic_deaths%', 'Deaths · Statistic'], ['%luckperms_prefix%', 'Rank prefix · LuckPerms'], ['%luckperms_primary_group_name%', 'Rank · LuckPerms']]],
+  ['Formatting', [['<white>', 'White text (close with </white>)'], ['<gray>', 'Grey text'], ['<dark_gray>', 'Dark grey text'], ['<#ffffff>', 'Any hex colour'],
+    ['<bold>', 'Bold'], ['<italic>', 'Italic'], ['<underlined>', 'Underlined'], ['<newline>', 'Line break'], ['<reset>', 'Clear formatting']]]
+];
+/** Placeholders this UI itself creates: variables, command arguments, function arguments, input boxes. */
+function phDynamic(d = doc()) {
+  const vars = new Set(), fargs = new Set();
+  for (const n of d.script.nodes) {
+    if (['set_var', 'add_var', 'if_var'].includes(n.type) && n.props.name) vars.add(n.props.name);
+    if (n.type === 'call_function') for (const part of String(n.props.args || '').split(',')) { const i = part.indexOf('='); if (i > 0) fargs.add(part.slice(0, i).trim()); }
+  }
+  const out = [];
+  if (vars.size) out.push(['Variables in this UI', [...vars].map(v => ['{var:' + v + '}', 'Script variable "' + v + '"'])]);
+  const inputs = d.elements.filter(e => e.type === 'input');
+  if (inputs.length) out.push(['Input boxes', inputs.map(e => ['{var:input_' + e.id + '}', 'Text typed into "' + e.name + '"'])]);
+  const args = (d.commands || []).flatMap(c => c.args.map(a => ['{arg:' + a.name + '}', `/${c.name} argument (${a.type}${a.optional ? ', optional' : ''})`]));
+  if (args.length) out.push(['Command arguments', args]);
+  if (fargs.size) out.push(['Function arguments', [...fargs].map(a => ['{' + a + '}', 'Passed to a function with Call function'])]);
+  return out;
+}
+document.addEventListener('focusin', ev => {
+  const t = ev.target;
+  if (t.matches && t.matches('textarea, input.inp:not([type]), input.inp[type=text], .node input, .modal input.inp') && !t.matches('#itemSearch,#nodeSearch,#phSearch,#libSearch')) S.lastField = t;
+});
+function insertPh(code) {
+  const f = S.lastField;
+  if (f && document.contains(f) && !f.disabled) {
+    const a = f.selectionStart ?? f.value.length, b = f.selectionEnd ?? a;
+    f.value = f.value.slice(0, a) + code + f.value.slice(b);
+    f.focus();
+    try { f.setSelectionRange(a + code.length, a + code.length); } catch { /* some inputs have no caret */ }
+    f.dispatchEvent(new Event('input', {bubbles: true}));
+    f.dispatchEvent(new Event('change', {bubbles: true}));
+    toast('Inserted ' + code, 'ok');
+  } else copyText(code, code + ' copied (click into a text box first to insert directly)');
+}
+function openPlaceholders() {
+  const search = h('input', {class: 'inp', id: 'phSearch', placeholder: 'Search placeholders…'});
+  const list = h('div', {class: 'ph-list'});
+  const target = S.lastField && document.contains(S.lastField) ? (S.lastField.closest('.row,.nf')?.querySelector('label,span')?.textContent || 'the last text box') : null;
+  const fill = () => {
+    const q = search.value.toLowerCase();
+    const groups = [...phDynamic(), ...PH_STATIC];
+    list.replaceChildren(...groups.map(([cat, items]) => {
+      const rows = items.filter(([c, d]) => !q || c.toLowerCase().includes(q) || d.toLowerCase().includes(q));
+      if (!rows.length) return null;
+      return h('div', {class: 'ph-group'}, h('h5', {}, cat), ...rows.map(([code, desc]) => {
+        const r = code.startsWith('%') || code.startsWith('<') ? '' : resolve(code, PV_VARS);
+        const sample = r && r !== code ? r : '';
+        return h('div', {class: 'ph-row', title: 'Click to insert'},
+          h('code', {}, code), h('span', {class: 'd'}, desc), sample ? h('span', {class: 'ex'}, 'e.g. ' + sample) : h('span', {class: 'ex'}),
+          h('button', {class: 'btn sm', onclick: ev => { ev.stopPropagation(); copyText(code, code + ' copied'); }}, 'Copy'),
+          h('button', {class: 'btn sm primary', onclick: ev => { ev.stopPropagation(); insertPh(code); }}, 'Insert'));
+      }));
+    }).filter(Boolean));
+  };
+  search.addEventListener('input', fill);
+  fill();
+  const m = modal('Placeholders', [
+    h('p', {}, 'Placeholders are replaced with live values when players see the UI. They work in text, buttons, progress bars, head owners and script fields. ',
+      target ? h('b', {style: {color: 'var(--text)'}}, 'Insert goes into: ' + target + '.') : 'Click into a text box first and Insert will type it there; otherwise it is copied.'),
+    search, list]);
+  m.el.style.width = 'min(820px,100%)';
+  setTimeout(() => search.focus(), 30);
+}
+
+/* ============================================================== tutorial */
+const TUT = [
+  {t: 'Welcome to Silent UI', b: 'You design menus, HUDs and in-world boards here, push them to your server, and players use them with their crosshair. This tour takes about two minutes. You can reopen it any time from the ? button.'},
+  {t: 'Pick what you are making', b: 'Click empty canvas to see the UI settings. Screen opens in front of the player, HUD stays on screen, World is a board placed in the world, Logic holds commands only.', hl: '#panel', go: () => { S.sel = []; S.side = 'props'; render(); }},
+  {t: 'Draw elements', b: 'Pick a tool on the left and drag on the canvas: R rectangle, T text, B button, I sprite, E item, H head, M player model. Drag to move, use the handles to resize, the top dot rotates.', hl: '#rail', go: () => setTool('button')},
+  {t: 'Drag in items and sprites', b: 'The Library has every Minecraft item sorted into Armour, Weapons, Tools, Food and more, plus your sprites. Drag any of them onto the canvas. You can also drop PNG files from your computer.', hl: '[data-rail=library]', go: () => toggleLibrary(true)},
+  {t: 'Style it', b: 'Select an element and open the Design tab: fill colour or sprite, text, hover effects, tab settings. Assets has a generator for rounded panels and icons.', hl: '#sidetabs', go: () => { if (!S.sel.length && els().length) S.sel = [els()[els().length - 1].id]; S.side = 'design'; render(); }},
+  {t: 'Use placeholders', b: 'Text can show live values like {player}, {var:coins} or %vault_eco_balance%. The Placeholders panel lists them all and inserts them where you were typing.', hl: '[data-rail=placeholders]', go: () => openPlaceholders()},
+  {t: 'Group things', b: 'Select several elements and press Ctrl+G. Clicking any member then selects the whole group; double-click picks one inside. Groups appear as folders in Layers, and scripts can show or hide them.', hl: '#sidetabs', go: () => { S.side = 'layers'; render(); }},
+  {t: 'Tabs', b: 'Layers → + Tab set makes pages that share one spot, with tab buttons that switch them on their own. Choose the page you are editing in the strip above the canvas.', hl: '#sidetabs'},
+  {t: 'Make it do things', b: 'Scripts connect events to actions: When clicked → Give item, Run command, Switch tab. Functions are reusable chains you call with values like price=100.', hl: '[data-rail=scripts]'},
+  {t: 'Add commands', b: 'Commands & functions adds /commands with typed arguments (player, number, choice…), tab completion and usage messages.', hl: '[data-rail=commands]'},
+  {t: 'Animate', b: 'The timeline records keyframes: turn on Auto-key, move the playhead, then move or resize the element. Easing smooths it in game.', hl: '[data-rail=timeline]'},
+  {t: 'Test, then ship', b: 'Preview runs the UI right here, scripts included. Push to server saves it on your server and reloads it instantly; Export gives you the JSON for plugins/SilentUI/uis.', hl: '#previewBtn'},
+  {t: 'Edit in game', b: 'In Minecraft, /sui edit <id> opens the UI with a toolbar: click to select, click again to move, right click for properties, scroll to resize, Save when done. That is the tour!'}
+];
+let tutStep = -1;
+function startTutorial(step = 0) { tutStep = step; renderTutorial(); }
+function endTutorial() { tutStep = -1; store.set('tutorialDone', true); $$('.tut-hl').forEach(x => x.classList.remove('tut-hl')); $('#tutorial')?.remove(); }
+function renderTutorial() {
+  $$('.tut-hl').forEach(x => x.classList.remove('tut-hl'));
+  if (tutStep < 0) return;
+  const s = TUT[tutStep];
+  let card = $('#tutorial');
+  if (!card) { card = h('div', {id: 'tutorial', role: 'dialog', 'aria-label': 'Tutorial'}); document.body.append(card); }
+  card.replaceChildren(
+    h('div', {class: 'tut-top'}, h('span', {}, `Step ${tutStep + 1} of ${TUT.length}`), h('button', {class: 'icon-btn', title: 'Close tutorial', onclick: endTutorial}, '×')),
+    h('div', {class: 'tut-bar'}, h('i', {style: {width: ((tutStep + 1) / TUT.length * 100) + '%'}})),
+    h('h3', {}, s.t), h('p', {}, s.b),
+    h('div', {class: 'tut-acts'},
+      tutStep > 0 ? h('button', {class: 'btn sm ghost', onclick: () => { tutStep--; renderTutorial(); }}, 'Back') : h('span'),
+      s.go ? h('button', {class: 'btn sm', onclick: () => { s.go(); setTimeout(renderTutorial, 50); }}, 'Show me') : null,
+      h('button', {class: 'btn sm primary', onclick: () => { if (tutStep >= TUT.length - 1) endTutorial(); else { tutStep++; renderTutorial(); } }}, tutStep >= TUT.length - 1 ? 'Finish' : 'Next')));
+  if (s.hl) { const t = $(s.hl); if (t) t.classList.add('tut-hl'); }
+}
+
+/* ============================================================== library drawer (drag onto the canvas) */
+const ITEM_CATS = [
+  ['All', null],
+  ['Armour', /(helmet|chestplate|leggings|boots|elytra|horse_armor|wolf_armor|^shield$|turtle_helmet|carved_pumpkin)/],
+  ['Weapons', /(sword|^bow$|crossbow|trident|^mace$|arrow|_axe$)/],
+  ['Tools', /(pickaxe|_shovel|_hoe|_axe$|shears|fishing_rod|flint_and_steel|^brush$|spyglass|compass|^clock$|bucket|^lead$|name_tag|carrot_on_a_stick)/],
+  ['Food', /(apple|bread|beef|porkchop|chicken|mutton|rabbit|cod$|salmon|potato|carrot$|melon_slice|cookie|cake|pie$|stew|soup|berries|honey_bottle|dried_kelp|beetroot$|chorus_fruit|golden_carrot|tropical_fish|pufferfish)/],
+  ['Gems & ores', /(^diamond$|^emerald$|ingot$|nugget$|^raw_|^coal$|lapis_lazuli|^quartz$|amethyst_shard|netherite_scrap|^redstone$|_ore$|^echo_shard|heart_of_the_sea|nether_star)/],
+  ['Blocks', /(_planks$|_log$|stone$|_bricks$|glass$|_wool$|_concrete$|terracotta|^dirt$|^sand$|_block$|bookshelf|^obsidian$|_leaves$|lantern$)/],
+  ['Potions', /(potion|tipped_arrow|^experience_bottle$)/],
+  ['Spawn eggs', /spawn_egg$/],
+  ['Discs', /music_disc/]
+];
+let libTab = 'items', libCat = 'Armour';
+function toggleLibrary(force) {
+  S.library = force ?? !S.library;
+  renderLibrary();
+  renderRail();
+}
+function renderLibrary() {
+  let lib = $('#library');
+  if (!S.library) { lib?.remove(); return; }
+  if (!lib) { lib = h('div', {id: 'library'}); $('#main').append(lib); }
+  const tabs = h('div', {class: 'mtabs'}, ...[['items', 'Items'], ['sprites', 'Sprites']].map(([k, l]) =>
+    h('button', {class: libTab === k ? 'on' : '', onclick: () => { libTab = k; renderLibrary(); }}, l)),
+    h('button', {style: {marginLeft: 'auto'}, title: 'Close', onclick: () => toggleLibrary(false)}, '×'));
+  const body = h('div', {class: 'lib-body'});
+  lib.replaceChildren(tabs, body);
+  if (libTab === 'sprites') return libSprites(body);
+  if (!assetsReady()) { body.append(needServer('Item icons')); return; }
+  const search = h('input', {class: 'inp', id: 'libSearch', placeholder: 'Search items…', value: S.libQuery || ''});
+  const chips = h('div', {class: 'lib-cats'}, ...ITEM_CATS.map(([name]) => h('button', {class: libCat === name ? 'on' : '', onclick: () => { libCat = name; renderLibrary(); }}, name)));
+  const grid = h('div', {class: 'lib-grid'});
+  const fill = async () => {
+    const q = (S.libQuery = search.value).trim().toLowerCase().replace(/ /g, '_');
+    const re = ITEM_CATS.find(c => c[0] === libCat)?.[1];
+    const list = (await loadItems()).filter(i => (!re || re.test(i.id)) && (!q || i.id.includes(q) || i.name.toLowerCase().includes(q.replace(/_/g, ' ')))).slice(0, 300);
+    grid.replaceChildren(...list.map(i => {
+      const c = h('div', {class: 'lib-cell', draggable: 'true', title: i.name + ' · drag onto the canvas'}, h('img', {src: iconUrl(i.id, 64), alt: '', loading: 'lazy', draggable: 'false'}));
+      c.addEventListener('dragstart', ev => { ev.dataTransfer.setData('text/x-sui', JSON.stringify({kind: 'item', id: i.id})); ev.dataTransfer.effectAllowed = 'copy'; });
+      c.addEventListener('dblclick', () => dropAsset({kind: 'item', id: i.id}, null));
+      return c;
+    }));
+    if (!list.length) grid.append(h('p', {class: 'lab'}, 'Nothing in this category matches.'));
+  };
+  search.addEventListener('input', () => { clearTimeout(search._t); search._t = setTimeout(fill, 120); });
+  body.append(search, chips, grid, h('p', {class: 'lab', style: {margin: '6px 2px 0'}},
+    doc().type === 'hud' ? 'HUDs cannot show 3D items, so dropped items become sprites.' : 'Drag onto the canvas for a 3D item. Hold Alt while dropping to add it as a flat sprite.'));
+  fill();
+}
+function libSprites(body) {
+  const dz = h('div', {class: 'drop', style: {padding: '14px'}}, 'Drop PNGs here (armour, icons, panels) or ', h('button', {class: 'btn sm', onclick: () => $('#fileSprite').click()}, 'Choose files'));
+  dz.addEventListener('dragover', ev => { if ([...ev.dataTransfer.types].includes('Files')) { ev.preventDefault(); dz.classList.add('over'); } });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', async ev => { ev.preventDefault(); dz.classList.remove('over'); await importImages(ev.dataTransfer.files); renderLibrary(); });
+  const grid = h('div', {class: 'lib-grid'}, ...doc().sprites.map(s => {
+    const c = h('div', {class: 'lib-cell', draggable: 'true', title: s.id + ' · ' + s.width + '×' + s.height}, h('img', {src: s.data, alt: '', draggable: 'false'}));
+    c.addEventListener('dragstart', ev => { ev.dataTransfer.setData('text/x-sui', JSON.stringify({kind: 'sprite', id: s.id})); ev.dataTransfer.effectAllowed = 'copy'; });
+    c.addEventListener('dblclick', () => dropAsset({kind: 'sprite', id: s.id}, null));
+    return c;
+  }));
+  body.append(dz, doc().sprites.length ? grid : h('p', {class: 'lab'}, 'No sprites yet. Drop some above, or get them from Assets.'),
+    h('button', {class: 'btn sm', style: {marginTop: '8px'}, onclick: () => openAssets('sprites')}, 'Generate shapes…'));
+}
+/** Adds an asset at a canvas point (or the centre). */
+async function dropAsset(a, p, flat) {
+  const d = doc();
+  const at = p || {x: d.canvas.width / 2, y: d.canvas.height / 2};
+  if (a.kind === 'item') {
+    if (d.type === 'hud' || flat) {
+      const id = await addSpriteFromDataUrl(await urlToDataUrl(iconUrl(a.id, 32)), a.id);
+      addElement('image', {sprite: id, name: a.id.replace(/_/g, ' '), w: 16, h: 16, x: Math.round(at.x - 8), y: Math.round(at.y - 8)});
+    } else {
+      addElement('item', {item: 'minecraft:' + a.id, name: a.id.replace(/_/g, ' '), w: 32, h: 32, x: Math.round(at.x - 16), y: Math.round(at.y - 16)});
+    }
+  } else if (a.kind === 'sprite') {
+    const s = d.sprites.find(x => x.id === a.id); if (!s) return;
+    addElement('image', {sprite: s.id, name: s.id, w: s.width, h: s.height, x: Math.round(at.x - s.width / 2), y: Math.round(at.y - s.height / 2)});
+  }
+}
+stage.addEventListener('dragover', ev => {
+  const types = [...ev.dataTransfer.types];
+  if (types.includes('text/x-sui') || types.includes('Files')) { ev.preventDefault(); ev.dataTransfer.dropEffect = 'copy'; stage.classList.add('dropping'); }
+});
+stage.addEventListener('dragleave', () => stage.classList.remove('dropping'));
+stage.addEventListener('drop', async ev => {
+  stage.classList.remove('dropping');
+  const p = toCanvas(ev);
+  const raw = ev.dataTransfer.getData('text/x-sui');
+  if (raw) { ev.preventDefault(); try { await dropAsset(JSON.parse(raw), p, ev.altKey); } catch { toast('Could not add that', 'err'); } return; }
+  const files = [...ev.dataTransfer.files].filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  ev.preventDefault();
+  let off = 0;
+  for (const f of files) {
+    const url = await new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(f); });
+    try {
+      const id = await addSpriteFromDataUrl(url, f.name.replace(/\.[^.]+$/, ''));
+      const s = doc().sprites.find(x => x.id === id);
+      addElement('image', {sprite: id, name: id, w: s.width, h: s.height, x: Math.round(p.x - s.width / 2 + off), y: Math.round(p.y - s.height / 2 + off)});
+      off += 8;
+    } catch { toast('Could not read ' + f.name, 'err'); }
+  }
+  if (S.library) renderLibrary();
+});
+
+/* ============================================================== grouping */
+/** The selectable group of an element: plain groups ("header") or groups inside a tab page ("shop/tools/header"). Tab pages themselves are not selection groups. */
+function selGroup(e) {
+  const g = e.group || '';
+  if (!g) return null;
+  const n = g.split('/').length;
+  return n === 1 || n >= 3 ? g : null;
+}
+const groupMembers = g => els().filter(e => e.group === g);
+function groupName(g) { return g.split('/').pop(); }
+function groupSel() {
+  const list = selected();
+  if (list.length < 2) return toast('Select two or more elements to group');
+  const pages = new Set(list.map(e => { const g = e.group || '', parts = g.split('/'); return parts.length >= 2 ? parts.slice(0, 2).join('/') : ''; }));
+  if (pages.size > 1) return toast('Those elements are on different tab pages', 'err');
+  const page = [...pages][0];
+  const taken = new Set(els().map(e => e.group));
+  let n = 1, name;
+  do { name = (page ? page + '/' : '') + 'group' + n++; } while (taken.has(name));
+  mutate(() => list.forEach(e => e.group = name));
+  toast('Grouped as ' + groupName(name) + '. Click any member to select the group, double-click for one element.', 'ok');
+}
+function ungroupSel() {
+  const list = selected().filter(e => selGroup(e));
+  if (!list.length) return toast('Nothing grouped is selected');
+  mutate(() => list.forEach(e => { const parts = e.group.split('/'); parts.pop(); e.group = parts.join('/'); }));
+  toast('Ungrouped', 'ok');
+}
+function renameGroup(oldG, raw) {
+  const name = slug(raw);
+  if (!name) return;
+  const parts = oldG.split('/'); parts[parts.length - 1] = name;
+  const g = parts.join('/');
+  if (g === oldG) return;
+  if (els().some(e => e.group === g)) return toast('A group with that name already exists', 'err');
+  mutate(d => {
+    d.elements.forEach(e => { if (e.group === oldG) e.group = g; });
+    d.script.nodes.forEach(n => { if (n.props.group === oldG) n.props.group = g; });
+  });
+}
 (function boot() {
   const saved = store.get('docs', null);
   if (saved && Array.isArray(saved.docs) && saved.docs.length) {
@@ -3156,6 +3500,7 @@ function tplShop() {
   const base = serverDefault();
   if (base) connectServer(base, store.get('token', ''), true);
   else renderSrv();
+  if (!store.get('tutorialDone', false)) setTimeout(() => startTutorial(0), 700);
 })();
-window.SilentUIEditor = {S, doc, exportJson, tplMenu, tplHud, tplBoard, tplShop, normalize, validate, BUILTIN_PRESETS, insertPreset, presetFromSelection, SRV, connectServer};
+window.SilentUIEditor = {S, doc, exportJson, tplMenu, tplHud, tplBoard, tplShop, normalize, validate, BUILTIN_PRESETS, insertPreset, presetFromSelection, SRV, connectServer, groupSel, ungroupSel, startTutorial, toggleLibrary};
 </script>
