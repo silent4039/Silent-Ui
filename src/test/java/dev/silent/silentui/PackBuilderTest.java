@@ -41,7 +41,8 @@ class PackBuilderTest {
     @BeforeAll
     static void build() throws Exception {
         Path dir = Files.createTempDirectory("silentui-test");
-        for (String name : List.of("example_menu.json", "example_shop.json", "example_hud.json", "example_board.json")) {
+        for (String name : List.of("example_menu.json", "example_shop.json", "example_hud.json", "example_board.json",
+                "example_chest.json", "example_hologram.json", "example_path.json")) {
             try (InputStream in = PackBuilderTest.class.getResourceAsStream("/uis/" + name)) {
                 assertNotNull(in, "missing example " + name);
                 Files.copy(in, dir.resolve(name));
@@ -58,7 +59,18 @@ class PackBuilderTest {
 
     @Test
     void examplesLoad() {
-        assertEquals(4, registry.all().size());
+        assertEquals(7, registry.all().size());
+        UiDefinition chest = registry.get("example_chest");
+        assertTrue(chest.isChest());
+        assertEquals(176, chest.canvas.width);
+        assertEquals(14 + 4 * 18 + 114, chest.canvas.height);
+        assertEquals(8, chest.slots.size());
+        assertEquals(4, chest.slot(22).frames.size());
+        UiDefinition path = registry.get("example_path");
+        assertEquals(90, path.settings.tilt, 1e-9);
+        assertTrue(path.elements.stream().allMatch(e -> e.tintSprite));
+        assertEquals(7, path.animations.get(0).tracks.size());
+        assertEquals("center", registry.get("example_hologram").settings.billboard);
         UiDefinition shop = registry.get("example_shop");
         assertEquals("blocks", shop.tabs.get("shop"));
         assertEquals("shop", shop.commands.get(0).name);

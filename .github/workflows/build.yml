@@ -47,6 +47,17 @@ jobs:
           name: SilentUI
           path: target/SilentUI-*.jar
 
+      - name: Publish jar to builds/<branch>
+        # A plain git branch is the easiest download for tools that can't reach GitHub's artifact storage.
+        if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          BR="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          mkdir -p /tmp/out && cp target/SilentUI-*.jar /tmp/out/
+          cd /tmp/out && git init -q && git checkout -q -b out
+          git config user.name "ci" && git config user.email "ci@users.noreply.github.com"
+          git add . && git commit -q -m "SilentUI jar for ${BR} at ${GITHUB_SHA::7}"
+          git push -f -q "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" "out:refs/heads/builds/${BR}"
+
       - name: Publish "latest" release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -56,6 +67,21 @@ jobs:
           gh release create latest target/SilentUI-*.jar \
             --title "Silent UI (latest build)" \
             --notes "Automatic build of commit ${GITHUB_SHA::7}. Drop the jar into your server's plugins folder." \
+            --prerelease
+
+      - name: Publish a preview release for this branch
+        # Lets you download and test a pull request's jar before it is merged (tag: preview-<branch>).
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.head_ref }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          TAG="preview-$(echo "$BRANCH" | tr '/' '-')"
+          gh release delete "$TAG" --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
+          gh release create "$TAG" target/SilentUI-*.jar --repo "$GITHUB_REPOSITORY" --target "$SHA" \
+            --title "Silent UI preview ($BRANCH)" \
+            --notes "Test build of $BRANCH at ${SHA::7}. Not merged into main yet." \
             --prerelease
 
   editor-check:

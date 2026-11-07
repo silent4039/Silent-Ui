@@ -66,7 +66,7 @@ function defaultsFor(type) {
     anchor: 'center', fill: '#1e1e1e', fillEnabled: true, sprite: '', text: '', textColor: '#ffffff', textSize: 1, align: 'center', shadow: true,
     hoverFill: '', hoverSprite: '', hoverTextColor: '', hoverScale: 1, item: 'minecraft:diamond', headOwner: '', value: '50', max: '100',
     barColor: '#ffffff', barSprite: '', placeholder: 'Type...', group: '', tabFor: '', activeFill: '', activeSprite: '', activeTextColor: '',
-    itemModel: '', glint: false, spin: 0, rotatable: false};
+    itemModel: '', glint: false, spin: 0, rotatable: false, textBg: '', seeThrough: false, tintSprite: false, tooltip: ''};
   const per = {
     rect: {name: 'Block', w: 80, h: 40},
     text: {name: 'Text', w: 120, h: 12, text: 'Hello <white>{player}</white>', fillEnabled: false, textColor: '#d9d9d9'},
@@ -435,6 +435,8 @@ const NODE_TYPES = {
   sound: {cat: 'action', label: 'Play sound', fields: [F.txt('sound', 'Sound', 'minecraft:ui.button.click'), F.num('volume', 'Volume', '1'), F.num('pitch', 'Pitch', '1')]},
   screen_fade: {cat: 'action', label: 'Screen fade', fields: [F.col('color', 'Colour'), F.num('in', 'In', '10'), F.num('stay', 'Stay', '10'), F.num('out', 'Out', '10')]},
   // logic
+  popup: {cat: 'action', label: 'Pop-up text', fields: [F.txt('text', 'Text', '<gold>+100 coins'), F.sel('at', 'Where', ['front', 'above', 'element']), F.el('element', 'Element', true),
+    F.num('ticks', 'Duration', '30'), F.num('rise', 'Rise (blocks)', '0.6'), F.num('scale', 'Size', '1'), F.sel('who', 'Seen by', ['player', 'everyone'])]},
   wait: {cat: 'logic', label: 'Wait', fields: [F.num('ticks', 'Ticks', '20')]},
   call_function: {cat: 'logic', label: 'Call function', fields: [F.fn(), F.txt('args', 'Args', 'item=diamond, price=10'), F.txt('ui', 'In UI', 'this UI')]},
   set_var: {cat: 'logic', label: 'Set variable', fields: [F.txt('name', 'Name', 'coins'), F.txt('value', 'Value', '0')]},
@@ -585,7 +587,11 @@ function elNode(e, v, opts = {}) {
     }
     return d;
   }
-  if (sprite && surl(sprite)) d.append(h('div', {class: 'bg', style: {backgroundImage: `url("${surl(sprite)}")`}}));
+  if (sprite && surl(sprite) && e.tintSprite) {
+    // tinted sprite: the sprite masks itself and the fill colour multiplies over it (what Minecraft does with the text colour)
+    const u = `url("${surl(sprite)}")`;
+    d.append(h('div', {class: 'bg tinted', style: {backgroundColor: fill, backgroundImage: u, backgroundBlendMode: 'multiply', webkitMaskImage: u, maskImage: u}}));
+  } else if (sprite && surl(sprite)) d.append(h('div', {class: 'bg', style: {backgroundImage: `url("${surl(sprite)}")`}}));
   else if (e.fillEnabled) d.append(h('div', {class: 'bg', style: {background: fill}}));
   if (e.type === 'progress') {
     const vars = opts.vars || PV_VARS;
@@ -605,6 +611,7 @@ function elNode(e, v, opts = {}) {
     const pad = e.type === 'text' ? 0 : 6;
     const l = h('div', {class: 'lbl'}, h('span', {html: mmToHtml(resolve(text, opts.vars || PV_VARS))}));
     if (doc().type === 'hud' || (PV && PV.d.type === 'hud')) l.style.whiteSpace = 'pre';
+    if (e.textBg && argbCss(e.textBg)) { l.firstChild.style.background = argbCss(e.textBg); l.firstChild.style.padding = '1px 2px'; }
     Object.assign(l.style, {color: tc, fontSize: (9 * e.textSize) + 'px', lineHeight: (10 * e.textSize) + 'px',
       justifyContent: e.align === 'left' ? 'flex-start' : e.align === 'right' ? 'flex-end' : 'center',
       textAlign: e.align, padding: `0 ${pad}px`, textShadow: e.shadow ? `${e.textSize}px ${e.textSize}px 0 rgba(0,0,0,.55)` : 'none'});
@@ -1080,6 +1087,8 @@ function designPanel(e) {
     field('Max', textInput(() => e.max, x => e.max = x)),
     field('Bar colour', colorInput(() => e.barColor, x => e.barColor = x)),
     field('Bar sprite', spriteSelect(() => e.barSprite, x => e.barSprite = x))));
+  const holoSec = hologramSection(e);
+  if (holoSec) parts.push(holoSec);
   const sets = tabsets();
   const pageOpts = [['', '— always visible —']];
   for (const [set, pages] of Object.entries(sets)) for (const pg of pages) pageOpts.push([set + '/' + pg, set + ' › ' + pg]);
@@ -1113,6 +1122,7 @@ function multiPanel(list) {
         h('button', {class: 'btn sm', onclick: () => distribute('y')}, 'Space evenly ↕'),
         list.some(e => selGroup(e)) ? h('button', {class: 'btn sm', onclick: ungroupSel}, 'Ungroup') : null,
         h('button', {class: 'btn sm primary', onclick: groupSel}, 'Group (Ctrl+G)'),
+        h('button', {class: 'btn sm', title: 'Each element pulses a little after the one before it', onclick: () => openWave(list)}, 'Animate as wave…'),
         h('button', {class: 'btn sm', onclick: duplicate}, 'Duplicate'),
         h('button', {class: 'btn sm danger', onclick: removeSel}, 'Delete'))),
     sec('Batch',
@@ -1358,7 +1368,8 @@ function renderRail() {
 const MENUS = {
   File: [['New UI from template…', openNewDocument], ['New screen UI', () => newTab('screen')], ['New chest inventory', () => newTab('chest')], ['New HUD', () => newTab('hud')], ['New world UI', () => newTab('world')], ['Reopen closed UI', reopenClosed], '-',
     ['New logic file (commands only)', () => newTab('logic')], '-',
-    ['Example: profile menu', () => openTab(tplMenu())], ['Example: tabbed shop', () => openTab(tplShop())], ['Example: HUD', () => openTab(tplHud())], ['Example: world board', () => openTab(tplBoard())], '-',
+    ['Example: profile menu', () => openTab(tplMenu())], ['Example: tabbed shop', () => openTab(tplShop())], ['Example: HUD', () => openTab(tplHud())], ['Example: world board', () => openTab(tplBoard())],
+    ['Example: chest GUI shop', () => openTab(tplChestGui())], ['Example: hologram', () => openTab(tplHologram())], ['Example: guide arrows', () => openTab(tplGuidePath())], '-',
     ['Open JSON…', () => $('#fileOpen').click(), 'Ctrl+O'], ['Load from server…', openPush], ['Export…', openExport, 'Ctrl+E'], ['Push to server…', openPush]],
   Edit: [['Undo', undo, 'Ctrl+Z'], ['Redo', redo, 'Ctrl+Shift+Z'], '-', ['Copy', copySel, 'Ctrl+C'], ['Paste', paste, 'Ctrl+V'], ['Duplicate', duplicate, 'Ctrl+D'], ['Delete', removeSel, 'Del'], '-',
     ['Select all', () => { S.sel = els().filter(e => !e.locked).map(e => e.id); render(); }, 'Ctrl+A']],
@@ -1829,6 +1840,12 @@ function validate(d) {
   for (const e of d.elements) for (const k of ['x', 'y', 'w', 'h', 'scale', 'rotation', 'opacity']) if (!Number.isFinite(e[k])) w.push(`${e.name}: ${k} must be a finite number.`);
   if (d.type === 'chest') for (const s of d.slots || []) if (s.slot >= d.settings.rows * 9) w.push(`Slot ${s.slot} is outside the inventory. Increase rows or remove this slot.`);
   const nodeIds = new Set(d.script.nodes.map(n => n.id));
+  if (d.type === 'chest') {
+    for (const e of d.elements) {
+      if (['item', 'head', 'model'].includes(e.type)) w.push(`"${e.name}": chest GUIs show items in slots, not as elements. Put the item in a slot instead.`);
+      if (/[^\x20-\x7e]/.test((e.text || '').replace(/<[^>]*>/g, ''))) w.push(`"${e.name}": text drawn in a chest background only supports plain ASCII characters.`);
+    }
+  }
   if (d.type === 'hud') {
     for (const e of d.elements) {
       if (e.type === 'item' || e.type === 'head' || e.type === 'model') w.push(`"${e.name}": items, heads and player models don't render on HUDs. Add them as sprites instead (Assets).`);
@@ -2198,6 +2215,7 @@ function pvExec(n, x) {
     case 'set_item': if (st) st.item = pvRes(p.item || '', x); break;
     case 'set_head': if (st) st.headOwner = pvRes(p.owner || '', x); break;
     case 'rotate': if (st) st.turn = (st.turn || 0) + Number(p.degrees || 90); break;
+    case 'popup': pvPopup(p, x); break;
     case 'give_item': pvChat(`<gray>Silent receives</gray> <white>${pvRes(p.amount || '1', x)}× ${pvRes(p.item || '', x).replace('minecraft:', '')}</white>`); break;
     case 'call_function': {
       const args = {...x};
@@ -2842,7 +2860,7 @@ const MONO = {panel: '#141414', panel2: '#1e1e1e', line: '#3a3a3a', text: '#f2f2
 function P(name, desc, build) { return {name, desc, ...build()}; }
 function spr(id, o) { return {id, data: genShape(o), width: o.w, height: o.h}; }
 function BUILTIN_PRESETS() {
-  return [
+  return [...waveableBuiltins(),
     P('Tab bar with pages', '3 tabs that switch pages, no scripts needed', () => {
       const set = 'tabs';
       const els = [el('image', {id: 'tb_bg', name: 'Tab panel', x: 0, y: 0, w: 300, h: 180, sprite: 'tb_panel', blocked: true})];
@@ -3343,7 +3361,9 @@ function uniqueDocument(d) {
 }
 
 function openNewDocument() {
-  const templates = [['Blank canvas', 'Start from scratch', 'screen', null], ['Tabbed shop', 'Items, tabs & purchase actions', 'screen', tplShop], ['Player profile', 'A ready-to-edit player menu', 'screen', tplMenu], ['HUD overlay', 'Stats that stay on screen', 'hud', tplHud], ['World board', 'An interactive welcome display', 'world', tplBoard], ['Chest inventory', 'Native slots & custom backgrounds', 'chest', null]];
+  const templates = [['Blank canvas', 'Start from scratch', 'screen', null], ['Tabbed shop', 'Items, tabs & purchase actions', 'screen', tplShop], ['Player profile', 'A ready-to-edit player menu', 'screen', tplMenu], ['HUD overlay', 'Stats that stay on screen', 'hud', tplHud], ['World board', 'An interactive welcome display', 'world', tplBoard], ['Chest inventory', 'Native slots & custom backgrounds', 'chest', null],
+    ['Chest GUI shop', 'Custom panel, items, daily reward & buy function', 'chest', tplChestGui], ['Hologram', 'Floating text with a spinning item & animations', 'world', tplHologram],
+    ['Guide arrows', 'Floor arrows that light up in a wave', 'world', tplGuidePath]];
   const name = h('input', {class: 'inp', id: 'newDocName', value: 'Untitled UI', 'aria-label': 'New UI name'});
   let picked = 0;
   const cards = h('div', {class: 'template-grid'});
@@ -3485,6 +3505,288 @@ function initializeWorkspace() {
   window.addEventListener('blur', () => { S.spaceDown = false; });
 }
 
+/* ============================================================== waves, holograms, pop-ups, chest GUI starters */
+/* Added on top of the Studio editor. Everything here produces normal elements, sprites, animations and script nodes. */
+
+function hexInt(hex) {
+  const s = String(hex || '#ffffff').replace('#', '');
+  const v = parseInt(s.length === 8 ? s.slice(2) : s, 16);
+  return Number.isFinite(v) ? v : 0xffffff;
+}
+/** "#AARRGGBB" -> css rgba() */
+function argbCss(argb) {
+  const s = String(argb || '').replace('#', '');
+  if (!/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(s)) return '';
+  const a = s.length === 8 ? parseInt(s.slice(0, 2), 16) / 255 : 1, rgb = s.length === 8 ? s.slice(2) : s;
+  return `rgba(${parseInt(rgb.slice(0, 2), 16)},${parseInt(rgb.slice(2, 4), 16)},${parseInt(rgb.slice(4, 6), 16)},${round(a, 3)})`;
+}
+function argbFrom(hex, alpha) {
+  const a = Math.round(clamp(alpha, 0, 1) * 255).toString(16).padStart(2, '0');
+  return '#' + a + String(hex || '#000000').replace('#', '').slice(-6);
+}
+
+/** Chevron sprite like the guide arrows on a path: light left half, shaded right half, so tinting keeps the 3D look. */
+function genChevron(w = 48, hgt = 20, thick = 6) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = hgt;
+  const g = c.getContext('2d'), im = g.createImageData(w, hgt);
+  const half = w / 2;
+  for (let x = 0; x < w; x++) {
+    const d = Math.abs(x + 0.5 - half);
+    const top = Math.round((d / half) * (hgt - thick));
+    const shade = x < half ? 255 : 128;
+    for (let y = top; y < Math.min(hgt, top + thick); y++) {
+      const edge = y === top + thick - 1 ? 0.78 : 1;
+      const v = Math.round(shade * edge), i = (y * w + x) * 4;
+      im.data.set([v, v, v, 255], i);
+    }
+  }
+  g.putImageData(im, 0, 0);
+  return c.toDataURL('image/png');
+}
+
+/* ------------------------------------------------------------ wave builder */
+const WAVE_EFFECTS = [['color', 'Colour pulse (lights)'], ['lift', 'Bounce up'], ['scale', 'Grow'], ['opacity', 'Fade in'], ['turn', '3D spin (items, heads)']];
+const WAVE_ORDERS = [['bottom', 'Bottom → top'], ['top', 'Top → bottom'], ['left', 'Left → right'], ['right', 'Right → left'], ['layer', 'Layer order']];
+function waveOrder(list, order) {
+  const cx = e => e.x + e.w / 2, cy = e => e.y + e.h / 2;
+  const by = {left: (a, b) => cx(a) - cx(b), right: (a, b) => cx(b) - cx(a), top: (a, b) => cy(a) - cy(b), bottom: (a, b) => cy(b) - cy(a)};
+  const all = els();
+  return [...list].sort(by[order] || ((a, b) => all.indexOf(a) - all.indexOf(b)));
+}
+/**
+ * One pulse per element, each starting `delay` ticks after the previous one: chase lights along a path,
+ * a row of buttons bouncing, letters fading in. Returns the animation and the element changes it needs.
+ */
+function buildWave(list, o) {
+  const n = list.length, pulse = Math.max(2, Math.round(o.pulse)), delay = Math.max(0, Math.round(o.delay));
+  const len = Math.max(1, (n - 1) * delay + pulse + Math.max(0, Math.round(o.gap)));
+  const anim = {id: rid('an'), name: o.name || 'wave', length: len, loop: !!o.loop, autoplay: !!o.autoplay, tracks: []};
+  const changes = [];
+  list.forEach((e, i) => {
+    const s = i * delay, m = s + Math.max(1, Math.round(pulse / 2)), f = s + pulse;
+    let prop, base, peak, end;
+    switch (o.effect) {
+      case 'color': {
+        const textual = ['text', 'button', 'input'].includes(e.type) && !e.sprite;
+        prop = textual ? 'textColor' : 'fill'; base = hexInt(o.from); peak = hexInt(o.to); end = base;
+        changes.push(textual ? {e, set: {textColor: o.from}} : {e, set: {fill: o.from, tintSprite: !!e.sprite}});
+        break;
+      }
+      case 'lift': prop = 'y'; base = e.y; peak = e.y - (Number(o.amount) || 6); end = base; break;
+      case 'scale': prop = 'scale'; base = e.scale || 1; peak = base * (Number(o.amount) || 1.3); end = base; break;
+      case 'opacity': prop = 'opacity'; base = clamp(Number(o.low) || 0, 0, 1); peak = 1; end = o.loop ? base : 1; break;
+      case 'turn': prop = 'turn'; base = 0; peak = (Number(o.amount) || 360) / 2; end = Number(o.amount) || 360; break;
+      default: return;
+    }
+    const keys = new Map();
+    keys.set(0, base); keys.set(s, base); keys.set(m, peak);
+    keys.set(f, end); keys.set(len, end);
+    if (o.effect === 'opacity' && !o.loop) keys.set(f, 1);
+    anim.tracks.push({element: e.id, property: prop, keys: [...keys.entries()].sort((a, b) => a[0] - b[0]).map(([t, v]) => ({t, v, ease: o.effect === 'turn' ? 'linear' : 'ease-in-out'}))});
+  });
+  return {anim, changes};
+}
+function openWave(list = selected()) {
+  if (list.length < 2) return toast('Select two or more elements, then make a wave.');
+  const o = {effect: 'color', from: '#cfcfcf', to: '#29b6ff', amount: 6, low: 0.2, pulse: 10, delay: 3, gap: 14, order: 'bottom', loop: true, autoplay: true, name: 'wave'};
+  const num = (k, min, step = 1) => { const i = h('input', {class: 'inp', type: 'number', value: o[k], min, step}); i.addEventListener('input', () => { o[k] = +i.value; info(); }); return i; };
+  const col = k => { const i = h('input', {class: 'inp', type: 'color', value: o[k], style: {height: '30px', padding: '2px'}}); i.addEventListener('input', () => { o[k] = i.value; }); return i; };
+  const effect = h('select', {class: 'inp'}, ...WAVE_EFFECTS.map(([v, l]) => h('option', {value: v}, l)));
+  const order = h('select', {class: 'inp'}, ...WAVE_ORDERS.map(([v, l]) => h('option', {value: v}, l)));
+  const name = h('input', {class: 'inp', value: o.name});
+  const loop = h('input', {type: 'checkbox', checked: true}), auto = h('input', {type: 'checkbox', checked: true});
+  const colours = h('div', {class: 'row2'}, field('From', col('from')), field('Lit', col('to')));
+  const amountRow = field('Amount', num('amount', -360, 0.1)), lowRow = field('Start opacity', num('low', 0, 0.05));
+  const summary = h('p', {class: 'lab', style: {margin: 0}});
+  const info = () => {
+    colours.hidden = o.effect !== 'color';
+    amountRow.hidden = !['lift', 'scale', 'turn'].includes(o.effect);
+    lowRow.hidden = o.effect !== 'opacity';
+    const len = (list.length - 1) * o.delay + o.pulse + o.gap;
+    summary.textContent = `${list.length} elements · one cycle ${len} ticks (${(len / 20).toFixed(2)} s)` + (o.effect === 'color' ? ' · sprites get "Tint sprite" switched on so they can change colour' : '');
+  };
+  effect.addEventListener('change', () => { o.effect = effect.value; o.amount = {lift: 6, scale: 1.3, turn: 360}[o.effect] ?? o.amount; amountRow.querySelector('input').value = o.amount; info(); });
+  order.addEventListener('change', () => { o.order = order.value; });
+  info();
+  modal('Animate as a wave', [
+    h('p', {}, 'Each element gets the same pulse, starting a little after the one before it. This is how the guide arrows on a spawn path light up one after another.'),
+    field('Effect', effect), colours, amountRow, lowRow,
+    h('div', {class: 'row2'}, field('Pulse (ticks)', num('pulse', 2)), field('Delay each', num('delay', 0))),
+    h('div', {class: 'row2'}, field('Pause after', num('gap', 0)), field('Order', order)),
+    field('Name', name),
+    h('div', {class: 'toolbar'}, h('label', {class: 'check'}, loop, 'Loop'), h('label', {class: 'check'}, auto, 'Play when shown')),
+    summary
+  ], [close => h('button', {class: 'btn primary', onclick: () => {
+    o.loop = loop.checked; o.autoplay = auto.checked; o.name = slug(name.value) || 'wave';
+    const taken = new Set(doc().animations.map(a => a.name));
+    let nm = o.name, k = 2; while (taken.has(nm)) nm = o.name + k++;
+    o.name = nm;
+    const {anim, changes} = buildWave(waveOrder(list, o.order), o);
+    mutate(d => { d.animations.push(anim); for (const c of changes) Object.assign(c.e, c.set); });
+    close();
+    S.anim.id = anim.id; S.anim.t = 0; S.dock = true;
+    render();
+    startPlay();
+    toast('Wave "' + nm + '" created and playing in the timeline.', 'ok');
+  }}, 'Create wave')]);
+}
+
+/* ------------------------------------------------------------ hologram + chest element settings */
+function hologramSection(e) {
+  const d = doc(), textual = !['image', 'item', 'head', 'model', 'progress'].includes(e.type);
+  const parts = [];
+  if (e.sprite || e.type === 'image' || e.type === 'rect') {
+    parts.push(checkInput('Tint sprite with the fill colour', () => e.tintSprite, x => e.tintSprite = x),
+      h('p', {class: 'hint-line'}, 'Use white or grey sprites. Colour animations and waves then recolour them, like arrows lighting up.'));
+  }
+  if (textual && d.type === 'world') {
+    const s = String(e.textBg || '').replace('#', ''), on = s.length >= 6;
+    const alpha = s.length === 8 ? parseInt(s.slice(0, 2), 16) / 255 : on ? 1 : 0.25, rgb = '#' + (on ? s.slice(-6) : '000000');
+    const colour = h('input', {type: 'color', value: rgb, style: {width: '34px', height: '28px', padding: '2px'}});
+    const op = h('input', {type: 'range', min: 0, max: 1, step: 0.05, value: alpha, style: {flex: 1}});
+    const apply = () => mutate(() => e.textBg = argbFrom(colour.value, +op.value));
+    colour.addEventListener('change', apply); op.addEventListener('change', apply);
+    parts.push(checkInput('Text background', () => !!e.textBg, x => e.textBg = x ? argbFrom('#000000', 0.25) : ''),
+      e.textBg ? h('div', {class: 'row'}, h('label', {}, 'Background'), h('div', {style: {display: 'flex', gap: '8px', alignItems: 'center'}}, colour, op)) : null,
+      checkInput('Visible through blocks', () => e.seeThrough, x => e.seeThrough = x));
+  }
+  if (d.type === 'chest') {
+    parts.push(field('Hover text', textInput(() => e.tooltip, x => e.tooltip = x, {ph: '<white>Close|<gray>Click to leave'})),
+      h('p', {class: 'hint-line'}, 'Shown when the cursor is over an empty slot under this element. Separate lines with |.'));
+  }
+  return parts.length ? sec(d.type === 'chest' ? 'Inventory' : d.type === 'world' ? 'Hologram' : 'Sprite colour', ...parts) : null;
+}
+
+/* ------------------------------------------------------------ templates */
+function tplGuidePath() {
+  const d = newDoc('world', 'Guide Arrows');
+  d.id = 'example_path';
+  d.canvas = {width: 64, height: 360};
+  Object.assign(d.settings, {tilt: 90, worldScale: 1.5, viewRange: 40, billboard: 'fixed', command: ''});
+  d.sprites = [{id: 'chevron', data: genChevron(48, 20, 6), width: 48, height: 20}];
+  d.elements = Array.from({length: 7}, (_, i) => el('image', {id: 'arrow' + (i + 1), name: 'Arrow ' + (i + 1), x: 8, y: 300 - i * 46, w: 48, h: 20,
+    sprite: 'chevron', fillEnabled: false, fill: '#cfcfcf', tintSprite: true, blocked: true}));
+  const {anim} = buildWave(d.elements, {effect: 'color', from: '#cfcfcf', to: '#29b6ff', pulse: 10, delay: 3, gap: 14, loop: true, autoplay: true, name: 'lights'});
+  d.animations = [anim];
+  return d;
+}
+function tplHologram() {
+  const d = newDoc('world', 'Portal Hologram');
+  d.id = 'example_hologram';
+  d.canvas = {width: 220, height: 120};
+  Object.assign(d.settings, {billboard: 'center', worldScale: 1.2, viewRange: 48});
+  d.elements = [
+    el('item', {id: 'icon', name: 'Floating item', x: 94, y: 4, w: 32, h: 32, item: 'minecraft:ender_eye', spin: 90, blocked: true, fillEnabled: false}),
+    el('text', {id: 'title', name: 'Title', x: 0, y: 42, w: 220, h: 14, text: '<bold>RETURN PORTAL</bold>', textSize: 1.4, textColor: '#5ce1ff', blocked: true}),
+    el('text', {id: 'l1', name: 'Line 1', x: 0, y: 62, w: 220, h: 10, text: 'We hope you had fun!', textColor: '#7dff8a', blocked: true}),
+    el('text', {id: 'l2', name: 'Line 2', x: 0, y: 74, w: 220, h: 10, text: 'This <yellow>portal</yellow> takes you back', textColor: '#ffffff', blocked: true}),
+    el('text', {id: 'l3', name: 'Line 3', x: 0, y: 86, w: 220, h: 10, text: 'to your <gold>island</gold>.', textColor: '#ffffff', blocked: true}),
+    el('text', {id: 'cta', name: 'Click line', x: 40, y: 102, w: 140, h: 12, text: '<bold>CLICK TO TRAVEL</bold>', textColor: '#ffd84a', textSize: 0.9, textBg: '#40000000'})
+  ];
+  d.animations = [
+    {id: 'an_bob', name: 'bob', length: 40, loop: true, autoplay: true, tracks: [{element: 'icon', property: 'y', keys: [{t: 0, v: 4, ease: 'ease-in-out'}, {t: 20, v: 0, ease: 'ease-in-out'}, {t: 40, v: 4, ease: 'linear'}]}]},
+    {id: 'an_title', name: 'shimmer', length: 60, loop: true, autoplay: true, tracks: [{element: 'title', property: 'textColor', keys: [{t: 0, v: 0x5ce1ff, ease: 'ease-in-out'}, {t: 30, v: 0xb18cff, ease: 'ease-in-out'}, {t: 60, v: 0x5ce1ff, ease: 'linear'}]}]},
+    {id: 'an_blink', name: 'blink', length: 30, loop: true, autoplay: true, tracks: [{element: 'cta', property: 'opacity', keys: [{t: 0, v: 1, ease: 'ease-in-out'}, {t: 15, v: 0.35, ease: 'ease-in-out'}, {t: 30, v: 1, ease: 'linear'}]}]}
+  ];
+  d.script.nodes = [
+    node('on_click', 40, 40, {__id: 'h1', element: 'cta', button: 'any'}, {then: ['h2']}),
+    node('popup', 320, 40, {__id: 'h2', text: '<aqua>Whoosh!', at: 'element', element: 'cta', ticks: '30', rise: '0.6', scale: '1', who: 'player'}, {then: ['h3']}),
+    node('run_command', 600, 40, {__id: 'h3', command: 'spawn', as: 'player'})
+  ];
+  return d;
+}
+/** Chest GUI in the style of most "setup" servers: a custom panel with a header tab and slot boxes only where items go. */
+function tplChestGui() {
+  const d = newDoc('chest', 'Item Shop');
+  d.id = 'example_chest';
+  Object.assign(d.settings, {rows: 4, guiTop: 14, title: '', command: 'itemshop'});
+  resizeChest(d);
+  const top = d.settings.guiTop, rows = d.settings.rows, panelH = rows * 18 + 26;
+  d.sprites = [
+    spr('panel', {w: 176, h: panelH, r: 4, fill: '#c6c6c6', border: '#555555', bw: 1}),
+    spr('header', {w: 92, h: 18, r: 3, fill: '#c6c6c6', border: '#555555', bw: 1}),
+    spr('slotbox', {w: 18, h: 18, r: 0, fill: '#8b8b8b', border: '#373737', bw: 1}),
+    spr('xbtn', {w: 16, h: 16, r: 3, fill: '#a33a3a', icon: 'close', iconColor: '#ffffff'})
+  ];
+  const items = [['diamond_sword', 120, 'Sharp and shiny'], ['bow', 40, 'Pew pew'], ['golden_apple', 50, 'Instant health'], ['ender_pearl', 25, 'Teleport a short way'],
+    ['iron_pickaxe', 30, 'Mines faster'], ['shield', 30, 'Blocks attacks'], ['totem_of_undying', 500, 'Cheat death once']];
+  const E = [
+    el('image', {id: 'bg', name: 'Panel', x: 0, y: top, w: 176, h: panelH, sprite: 'panel', blocked: true}),
+    el('image', {id: 'head', name: 'Header tab', x: 42, y: 0, w: 92, h: 18, sprite: 'header', blocked: true}),
+    el('text', {id: 'head_t', name: 'Header text', x: 42, y: 5, w: 92, h: 9, text: 'ITEM SHOP', textColor: '#404040', shadow: false, blocked: true}),
+    el('text', {id: 'coins', name: 'Coins', x: 8, y: top + 6, w: 160, h: 9, text: 'Coins: {var:coins}', textColor: '#404040', shadow: false, align: 'right', blocked: true}),
+    el('image', {id: 'close', name: 'Close button', x: 8 + 4 * 18, y: top + 18 + 3 * 18, w: 16, h: 16, sprite: 'xbtn', tooltip: '<red>Close|<gray>Click to leave'})
+  ];
+  items.forEach((_, i) => E.push(el('image', {id: 'box' + i, name: 'Slot box ' + (i + 10), x: 7 + (i + 1) * 18, y: top + 17 + 18, w: 18, h: 18, sprite: 'slotbox', blocked: true})));
+  E.push(el('image', {id: 'box_daily', name: 'Slot box 22', x: 7 + 4 * 18, y: top + 17 + 2 * 18, w: 18, h: 18, sprite: 'slotbox', blocked: true}));
+  d.elements = E;
+  d.slots = items.map(([id, price, desc], i) => Object.assign(slotDefaults(10 + i), {item: 'minecraft:' + id, name: '<white>' + id.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+    lore: `<gray>${desc}\n\n<gray>Price: <gold>${price} coins\n<yellow>Click to buy`}));
+  d.slots.push(Object.assign(slotDefaults(22), {item: 'minecraft:chest', name: '<gold>Daily reward', lore: '<gray>Free coins every day\n<yellow>Click to claim',
+    frames: ['minecraft:chest', 'minecraft:ender_chest', 'minecraft:trapped_chest', 'minecraft:ender_chest'], frameTicks: 10, glint: true}));
+  const nodes = [
+    node('on_open', 40, 40, {__id: 'c0'}, {then: ['c0b']}),
+    node('if_var', 320, 40, {__id: 'c0b', name: 'coins', op: '==', value: ''}, {true: ['c0c']}),
+    node('set_var', 600, 40, {__id: 'c0c', name: 'coins', value: '250'}),
+    node('on_click', 40, 220, {__id: 'cx', element: 'close', button: 'any'}, {then: ['cx2']}),
+    node('close_ui', 320, 220, {__id: 'cx2'}),
+    node('on_slot_click', 40, 360, {__id: 'cd', slot: '22', button: 'any'}, {then: ['cd2']}),
+    node('add_var', 320, 360, {__id: 'cd2', name: 'coins', amount: '100'}, {then: ['cd3']}),
+    node('popup', 600, 360, {__id: 'cd3', text: '<gold>+100 coins', at: 'front', ticks: '30', rise: '0.6', scale: '1', who: 'player'}, {then: ['cd4']}),
+    node('set_slot', 880, 360, {__id: 'cd4', slot: '22', item: 'minecraft:barrier', amount: '1', name: '<red>Come back tomorrow', lore: ''})
+  ];
+  items.forEach(([id, price], i) => {
+    nodes.push(node('on_slot_click', 40, 560 + i * 160, {__id: 'cs' + i, slot: String(10 + i), button: 'any'}, {then: ['cf' + i]}));
+    nodes.push(node('call_function', 320, 560 + i * 160, {__id: 'cf' + i, name: 'buy', args: `item=minecraft:${id}, price=${price}`}));
+  });
+  const fy = 560 + items.length * 160;
+  nodes.push(node('on_function', 40, fy, {__id: 'b1', name: 'buy'}, {then: ['b2']}));
+  nodes.push(node('if_var', 320, fy, {__id: 'b2', name: 'coins', op: '>=', value: '{price}'}, {true: ['b3'], false: ['b6']}));
+  nodes.push(node('add_var', 600, fy - 40, {__id: 'b3', name: 'coins', amount: '-{price}'}, {then: ['b4']}));
+  nodes.push(node('give_item', 880, fy - 40, {__id: 'b4', item: '{item}', amount: '1'}, {then: ['b5']}));
+  nodes.push(node('popup', 1160, fy - 40, {__id: 'b5', text: '<red>-{price} coins', at: 'front', ticks: '26', rise: '0.5', scale: '1', who: 'player'}));
+  nodes.push(node('sound', 600, fy + 160, {__id: 'b6', sound: 'minecraft:entity.villager.no', volume: '0.6', pitch: '1'}));
+  d.script.nodes = nodes;
+  return d;
+}
+function waveableBuiltins() {
+  const chevrons = Array.from({length: 5}, (_, i) => el('image', {id: 'cw' + i, name: 'Chevron ' + (i + 1), x: 0, y: 200 - i * 44, w: 48, h: 20, sprite: 'cw_chevron', fillEnabled: false, fill: '#cfcfcf', tintSprite: true, blocked: true}));
+  const wave = buildWave(chevrons, {effect: 'color', from: '#cfcfcf', to: '#29b6ff', pulse: 10, delay: 3, gap: 12, loop: true, autoplay: true, name: 'chevron_wave'}).anim;
+  const label = el('text', {id: 'fl_text', name: 'Floating label', x: 0, y: 0, w: 160, h: 12, text: '<bold>Floating label</bold>', textColor: '#ffffff', textBg: '#40000000', blocked: true});
+  const bob = {id: rid('an'), name: 'float', length: 40, loop: true, autoplay: true, tracks: [{element: 'fl_text', property: 'y', keys: [{t: 0, v: 0, ease: 'ease-in-out'}, {t: 20, v: -4, ease: 'ease-in-out'}, {t: 40, v: 0, ease: 'linear'}]}]};
+  return [
+    {name: 'Chevron wave', desc: 'Arrows that light up one after another (lay it flat with Tilt 90)', elements: chevrons, animations: [wave],
+      sprites: [{id: 'cw_chevron', data: genChevron(48, 20, 6), width: 48, height: 20}], nodes: []},
+    {name: 'Floating label', desc: 'Hologram text with a soft background that bobs up and down', elements: [label], animations: [bob], sprites: [], nodes: []},
+    {name: 'Pop-up reward', desc: 'Button that gives coins and shows floating "+100" text', sprites: [],
+      elements: [el('button', {id: 'pr_btn', name: 'Collect', x: 0, y: 0, w: 90, h: 22, text: 'Collect', fill: '#ffffff', textColor: '#000000', shadow: false, hoverFill: '#d9d9d9', hoverScale: 1.05})],
+      nodes: [node('on_click', 40, 40, {__id: 'pr1', element: 'pr_btn', button: 'any'}, {then: ['pr2']}), node('add_var', 320, 40, {__id: 'pr2', name: 'coins', amount: '100'}, {then: ['pr3']}),
+        node('popup', 600, 40, {__id: 'pr3', text: '<gold>+100 coins', at: 'element', element: 'pr_btn', ticks: '30', rise: '0.6', scale: '1', who: 'player'})]}
+  ];
+}
+
+/* ------------------------------------------------------------ preview pop-ups */
+function pvPopup(p, x) {
+  if (!PV) return;
+  const r = pvEl.getBoundingClientRect(), L = pvLayout();
+  let px = r.width / 2, py = r.height / 2 - 40;
+  const st = PV.states[p.element];
+  if (p.at === 'element' && st) { px = L.x + (st.x + st.w / 2) * L.z; py = L.y + st.y * L.z; }
+  else if (PV.mouse) { px = PV.mouse.x; py = PV.mouse.y - 24; }
+  const life = clamp(+p.ticks || 30, 12, 200) * 50, rise = (+p.rise || 0.6) * 80, sc = clamp(+p.scale || 1, 0.1, 8);
+  const div = h('div', {class: 'pv-popup', html: mmToHtml(pvRes(p.text || '', x)), style: {left: px + 'px', top: py + 'px'}});
+  pvEl.append(div);
+  div.animate([
+    {transform: 'translate(-50%, 0) scale(0)', opacity: 1},
+    {transform: `translate(-50%, 0) scale(${sc * 1.25})`, offset: 0.1},
+    {transform: `translate(-50%, ${-rise * 0.15}px) scale(${sc})`, offset: 0.18},
+    {transform: `translate(-50%, ${-rise * 0.85}px) scale(${sc})`, offset: 0.88},
+    {transform: `translate(-50%, ${-rise}px) scale(0)`}
+  ], {duration: life, easing: 'linear'}).finished.then(() => div.remove(), () => div.remove());
+}
+pvEl.addEventListener('pointermove', ev => { if (!PV) return; const r = pvEl.getBoundingClientRect(); PV.mouse = {x: ev.clientX - r.left, y: ev.clientY - r.top}; });
+
 (function boot() {
   initializeWorkspace();
   const saved = store.get('docs', null);
@@ -3504,4 +3806,4 @@ function initializeWorkspace() {
   else renderSrv();
   // Help is always available; keep the first canvas unobstructed.
 })();
-window.SilentUIEditor = {S, doc, exportJson, tplMenu, tplHud, tplBoard, tplShop, normalize, validate, BUILTIN_PRESETS, insertPreset, presetFromSelection, SRV, connectServer, groupSel, ungroupSel, startTutorial, toggleLibrary};
+window.SilentUIEditor = {buildWave, openWave, tplGuidePath, tplHologram, tplChestGui, waveableBuiltins, S, doc, exportJson, tplMenu, tplHud, tplBoard, tplShop, normalize, validate, BUILTIN_PRESETS, insertPreset, presetFromSelection, SRV, connectServer, groupSel, ungroupSel, startTutorial, toggleLibrary};

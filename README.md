@@ -78,6 +78,31 @@ Shortcuts: `V R T B I N G E H M` tools · `A` timeline · `K` scripts · `P` pre
 
 The toolbar has Move, Size, Up/Down (layer order), Copy, Delete, Edit, Add, Page (cycle tab pages), Undo, Save and Exit. **Save** writes the file and reloads it for everyone. Scripts and animations don't run while editing.
 
+## Holograms and animated displays
+
+A **World display** is a hologram: text, sprites, items, heads and player models floating at a spot in the world. `/sui world place <ui>` puts it in front of you, `/sui world move <name>` moves it, and `/sui import decentholograms` converts existing DecentHolograms.
+
+- **Faces:** *Fixed direction* (signs, screens), *Always faces viewer* (classic floating text) or *Turns left / right*.
+- **Tilt 90** lays it flat on the floor, **-90** puts it on the ceiling. That's how path arrows are made.
+- **Text background** and **Visible through blocks** are per text element (Inspect → Hologram).
+- **Tint sprite with the fill colour:** draw sprites in white or grey and any colour animation recolours them in game.
+- **Animate as wave…** (select several elements): every element gets the same pulse, each starting a few ticks after the previous one. Colour pulse, bounce, grow, fade or 3D spin, in any direction, looping or once. This is how guide arrows light up one after another toward a portal.
+- **Pop-up text** script node: floating text that pops in, drifts up and shrinks away (for `+100 coins`, damage numbers or "Level up!"). It can appear in front of the player, above their head or on an element, for just that player or everyone.
+
+Templates: **Hologram** (floating title with a spinning item, a shimmering colour and a blinking click line) and **Guide arrows** (seven floor chevrons that light up in a wave).
+
+## Chest GUIs
+
+A **Chest inventory** UI is a real chest menu with your own background, like the GUIs on most setup servers: the background is drawn as glyphs in the inventory title, and items sit in real slots on top.
+
+- Draw the background with sprites and text on the canvas. **Header** adds space above the chest for a tab that sticks out. Cover slots you don't use, and draw boxes only where items go.
+- **Slots** sets each slot's item, amount, name, lore, glint, item model, head, animated frames (items that cycle), or an invisible clickable item so a button drawn in the background can be clicked.
+- An element drawn over empty slots can have **Hover text**, and clicks on it run its *When clicked* scripts.
+- Scripts: *When inventory slot is clicked* (slot lists like `10-16`, any/left/right/shift) and *Set inventory slot*.
+- `/sui bind <ui>` while looking at a block (a chest, an NPC stand, a crafting table...) makes right clicking it open the GUI.
+
+The **Chest GUI shop** template has a custom panel and header tab, seven items with prices, an animated daily reward that turns into a barrier once claimed, a close button with hover text, and a shared `buy` function.
+
 ## Tabs
 
 Make a tab set in the editor (Layers → **+ Tab set**). Elements on a page have the group `tabset/page`; tab buttons have **Tab button** set to `tabset/page` and an active fill/text colour. Clicking a tab button switches pages with no scripting. Scripts can also use **Switch tab**, **Show/Hide/Toggle group**.

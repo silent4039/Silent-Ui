@@ -511,3 +511,8 @@ button:disabled{opacity:.35;cursor:default;filter:none!important}
   .zoomctl{right:8px;bottom:8px}.zoomctl .icon-btn{width:22px}.zoomctl span{min-width:35px}.tab .typ{display:none}.tab{padding:0 9px}
   .modal-bg{padding:8px}.modal .body{padding:14px}.modal footer{padding:12px}.toasts{max-width:calc(100% - 24px);right:12px}
 }
+
+/* waves, holograms, pop-ups */
+.hint-line{margin:2px 0 8px;color:var(--faint);font-size:11.5px;line-height:1.45}
+.el .bg.tinted{-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;background-size:100% 100%;image-rendering:pixelated}
+.pv-popup{position:absolute;z-index:7;pointer-events:none;font:700 18px var(--mc);color:#fff;text-shadow:2px 2px 0 #3f3f3f;white-space:nowrap;transform-origin:50% 100%}
