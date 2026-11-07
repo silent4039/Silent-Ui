@@ -58,6 +58,21 @@ jobs:
             --notes "Automatic build of commit ${GITHUB_SHA::7}. Drop the jar into your server's plugins folder." \
             --prerelease
 
+      - name: Publish a preview release for this branch
+        # Lets you download and test a pull request's jar before it is merged (tag: preview-<branch>).
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.head_ref }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          TAG="preview-$(echo "$BRANCH" | tr '/' '-')"
+          gh release delete "$TAG" --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
+          gh release create "$TAG" target/SilentUI-*.jar --repo "$GITHUB_REPOSITORY" --target "$SHA" \
+            --title "Silent UI preview ($BRANCH)" \
+            --notes "Test build of $BRANCH at ${SHA::7}. Not merged into main yet." \
+            --prerelease
+
   editor-check:
     runs-on: ubuntu-latest
     steps:
