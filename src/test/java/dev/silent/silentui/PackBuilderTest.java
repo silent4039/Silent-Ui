@@ -41,7 +41,7 @@ class PackBuilderTest {
     @BeforeAll
     static void build() throws Exception {
         Path dir = Files.createTempDirectory("silentui-test");
-        for (String name : List.of("example_menu.json", "example_hud.json", "example_board.json")) {
+        for (String name : List.of("example_menu.json", "example_shop.json", "example_hud.json", "example_board.json")) {
             try (InputStream in = PackBuilderTest.class.getResourceAsStream("/uis/" + name)) {
                 assertNotNull(in, "missing example " + name);
                 Files.copy(in, dir.resolve(name));
@@ -58,7 +58,12 @@ class PackBuilderTest {
 
     @Test
     void examplesLoad() {
-        assertEquals(3, registry.all().size());
+        assertEquals(4, registry.all().size());
+        UiDefinition shop = registry.get("example_shop");
+        assertEquals("blocks", shop.tabs.get("shop"));
+        assertEquals("shop", shop.commands.get(0).name);
+        assertEquals("choice", shop.commands.get(0).args.get(0).type);
+        assertTrue(shop.elements.stream().anyMatch(e -> "shop/tools".equals(e.tabFor)));
         assertTrue(registry.get("example_menu").isScreen());
         assertTrue(registry.get("example_hud").isHud());
         assertTrue(registry.get("example_board").isWorld());

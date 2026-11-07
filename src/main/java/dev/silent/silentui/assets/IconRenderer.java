@@ -101,6 +101,20 @@ public final class IconRenderer {
             BufferedImage steve = assets.texture("minecraft:entity/player/wide/steve");
             if (steve != null) return renderHead(steve, size);
         }
+        switch (id) {
+            case "chest", "trapped_chest", "ender_chest", "christmas_chest" -> {
+                String tex = id.equals("ender_chest") ? "ender" : id.equals("trapped_chest") ? "trapped" : "normal";
+                if (assets.texture("minecraft:entity/chest/" + tex) != null) return chest("minecraft:entity/chest/" + tex, size);
+            }
+            case "shield" -> {
+                BufferedImage s = assets.texture("minecraft:entity/shield_base_nopattern");
+                if (s != null && s.getWidth() >= 14) {
+                    int k = s.getWidth() / 64;
+                    return scale(s.getSubimage(k, k, 12 * k, 22 * k), size);
+                }
+            }
+            default -> { }
+        }
         AssetManager.ItemModelRef ref = assets.itemModel(id);
         Resolved r = resolve(ref.model());
         if (r == null || r.builtinEntity || (r.elements == null && !r.generated)) {
@@ -145,6 +159,46 @@ public final class IconRenderer {
         els.add(el);
         r.elements = els;
         return renderElements(r, new int[0], size);
+    }
+
+    /**
+     * Chests are entity models: body, lid and latch boxes with UVs from the 64x64 entity texture
+     * (the entity is drawn upside down, so faces swap and flip accordingly).
+     */
+    private BufferedImage chest(String texture, int size) {
+        Resolved r = new Resolved();
+        r.textures.put("c", texture);
+        JsonArray els = new JsonArray();
+        // body 14x10x14 at texture (0,19)
+        els.add(box(1, 0, 1, 15, 10, 15, Map.of(
+                "up", new double[]{28, 33, 42, 19}, "north", new double[]{42, 43, 56, 33}, "south", new double[]{14, 43, 28, 33},
+                "west", new double[]{14, 43, 0, 33}, "east", new double[]{42, 43, 28, 33}, "down", new double[]{14, 19, 28, 33})));
+        // lid 14x5x14 at texture (0,0)
+        els.add(box(1, 9, 1, 15, 14, 15, Map.of(
+                "up", new double[]{28, 14, 42, 0}, "north", new double[]{42, 19, 56, 14}, "south", new double[]{14, 19, 28, 14},
+                "west", new double[]{14, 19, 0, 14}, "east", new double[]{42, 19, 28, 14})));
+        // latch 2x4x1 at texture (0,0)
+        els.add(box(7, 7, 0, 9, 11, 1, Map.of(
+                "up", new double[]{3, 1, 5, 0}, "north", new double[]{4, 5, 6, 1}, "west", new double[]{1, 5, 0, 1}, "east", new double[]{4, 5, 3, 1})));
+        r.elements = els;
+        return renderElements(r, new int[0], size);
+    }
+
+    /** Box element with per-face UVs given in texture pixels of a 64-wide texture. */
+    private static JsonObject box(double x1, double y1, double z1, double x2, double y2, double z2, Map<String, double[]> uvs) {
+        JsonObject el = new JsonObject();
+        el.add("from", arr(x1, y1, z1));
+        el.add("to", arr(x2, y2, z2));
+        JsonObject faces = new JsonObject();
+        for (Map.Entry<String, double[]> e : uvs.entrySet()) {
+            JsonObject f = new JsonObject();
+            double[] p = e.getValue();
+            f.add("uv", arr(p[0] / 4, p[1] / 4, p[2] / 4, p[3] / 4));
+            f.addProperty("texture", "#c");
+            faces.add(e.getKey(), f);
+        }
+        el.add("faces", faces);
+        return el;
     }
 
     private static JsonArray arr(double... v) {
