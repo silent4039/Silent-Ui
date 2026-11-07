@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build with Maven
+        id: mvn
+        run: |
+          set -o pipefail
+          mvn -B -ntp package 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: Report compile errors
+        if: steps.mvn.outcome == 'failure'
+        run: |
+          # One annotation holding all compiler errors (readable without logging in).
+          ERRS=$(grep -E '^\[ERROR\] .*\.java:\[' build.log | sed 's#.*/src/main/java/##' | head -60 || true)
+          if [ -z "$ERRS" ]; then ERRS=$(grep -E '^\[ERROR\]' build.log | head -40); fi
+          ERRS="${ERRS//'%'/'%25'}"
+          ERRS="${ERRS//$'\n'/'%0A'}"
+          echo "::error title=Build failed::$ERRS"
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SilentUI
+          path: target/SilentUI-*.jar
+
+      - name: Publish "latest" release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --cleanup-tag -y || true
+          gh release create latest target/SilentUI-*.jar \
+            --title "Silent UI (latest build)" \
+            --notes "Automatic build of commit ${GITHUB_SHA::7}. Drop the jar into your server's plugins folder." \
+            --prerelease
