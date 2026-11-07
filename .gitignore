@@ -1,0 +1,11 @@
+target/
+out/
+build/
+*.iml
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/shelf/
+.idea/usage.statistics.xml
+.idea/dictionaries/
+.DS_Store
+stubs-build/

@@ -1,0 +1,67 @@
+#  ____  _ _            _     _   _ ___
+# / ___|(_) | ___ _ __ | |_  | | | |_ _|
+# \___ \| | |/ _ \ '_ \| __| | | | || |
+#  ___) | | |  __/ | | | |_  | |_| || |
+# |____/|_|_|\___|_| |_|\__|  \___/|___|
+#
+# Put exported UI files (*.json from the editor) in plugins/SilentUI/uis/
+# then run /sui reload. The resource pack is rebuilt and resent automatically.
+
+# Built-in web server. Serves the resource pack AND the editor.
+# Editor:  http://<public-host>:<port>/editor
+web:
+  enabled: true
+  port: 8163
+  # The address players' clients use to download the pack. Must be reachable
+  # from the internet (your server IP or domain). Do NOT leave as localhost in production.
+  public-host: "127.0.0.1"
+  # Token for "Push to server" from the editor. Auto-generated on first start.
+  # Anyone with this token can upload UIs, keep it secret.
+  upload-token: ""
+
+resource-pack:
+  # true  = Silent UI sends its own pack to players on join.
+  # false = you merge plugins/SilentUI/output/SilentUI-pack.zip into your own pack
+  #         (ItemsAdder / Nexo / Oraxen / your pack). Sprites will still work.
+  send-on-join: true
+  required: false
+  prompt: "<#ff8fd1>Silent UI</#ff8fd1> <gray>needs a small resource pack for menus and HUDs."
+  # Pack format written into pack.mcmeta. Supported range is also declared so newer clients accept it.
+  pack-format: 75
+  # Delay after join before sending (ticks)
+  send-delay: 20
+
+screen:
+  # Distance (blocks) of the canvas in front of the player's eyes
+  distance: 1.4
+  # Portion of the vertical field of view the canvas height takes (0.1 - 1.0)
+  view-fill: 0.82
+  # Field of view assumed for sizing (vanilla default is 70)
+  fov: 70
+  # Seconds a click is ignored after opening (prevents the opening click from clicking a button)
+  open-click-grace-ticks: 6
+  # Ticks between placeholder refreshes for text inside screen/world UIs
+  text-refresh-ticks: 10
+  # Smoothing (ticks) for hover effects
+  hover-interpolation: 3
+
+hud:
+  # Ticks between HUD refreshes (placeholders). Packets are only sent when the text actually changes.
+  refresh-ticks: 5
+  # Bossbar colour used as the invisible HUD carrier. Its textures are made transparent in the pack.
+  bossbar-color: WHITE
+
+world-ui:
+  # Max distance a player can interact with a world UI from
+  interact-range: 8.0
+
+# Advanced: fine tuning of how glyphs line up inside text displays.
+# Only touch these if elements are visibly offset by a pixel or two.
+calibration:
+  glyph-center-x: 0.5
+  glyph-center-y: 5.0
+  text-line-height: 10.0
+  # Rotate item/head displays 180° so they face the viewer
+  item-flip: true
+  # Pixels between stacked layers (prevents z-fighting)
+  layer-depth: 0.0018

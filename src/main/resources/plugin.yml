@@ -1,0 +1,24 @@
+name: SilentUI
+version: '${project.version}'
+main: dev.silent.silentui.SilentUI
+api-version: '1.21'
+description: Custom cursor UIs, HUDs and world UIs without client mods.
+authors: [Silent]
+softdepend: [PlaceholderAPI]
+
+commands:
+  silentui:
+    description: Silent UI main command
+    aliases: [sui, silentuis]
+    usage: /silentui help
+
+permissions:
+  silentui.admin:
+    description: Full access to Silent UI admin commands
+    default: op
+  silentui.open.others:
+    description: Open/close UIs for other players
+    default: op
+  silentui.open.*:
+    description: Open any UI with /sui open
+    default: op
