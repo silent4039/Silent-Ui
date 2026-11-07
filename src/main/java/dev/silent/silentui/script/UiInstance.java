@@ -57,6 +57,32 @@ public interface UiInstance {
         }
     }
 
+    /** Moves a tab set to its next (dir=1) or previous (dir=-1) page, wrapping around. */
+    default void nextTab(String tabset, int dir) {
+        if (tabset == null || tabset.isEmpty()) return;
+        java.util.List<String> pages = new java.util.ArrayList<>();
+        String current = null, firstVisible = null;
+        String prefix = tabset + "/";
+        for (ElementState s : states()) {
+            String g = s.def.group;
+            if (g != null && g.startsWith(prefix)) {
+                String page = g.substring(prefix.length()).split("/")[0];
+                if (!pages.contains(page)) pages.add(page);
+                if (s.visible && firstVisible == null) firstVisible = page;
+            }
+            String tf = s.def.tabFor;
+            if (tf != null && tf.startsWith(prefix)) {
+                String page = tf.substring(prefix.length());
+                if (!pages.contains(page)) pages.add(page);
+                if (s.active) current = page;
+            }
+        }
+        if (pages.isEmpty()) return;
+        if (current == null) current = firstVisible != null ? firstVisible : pages.get(0);
+        int i = Math.max(0, pages.indexOf(current));
+        switchTab(tabset, pages.get(Math.floorMod(i + dir, pages.size())));
+    }
+
     default void setGroupVisible(String group, Boolean visible) {
         for (ElementState s : states()) {
             if (!s.inGroup(group)) continue;

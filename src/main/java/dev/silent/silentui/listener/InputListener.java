@@ -64,10 +64,47 @@ public final class InputListener implements Listener {
         if (plugin.manager().byHitbox(e.getRightClicked()) != null) e.setCancelled(true);
     }
 
-    /** While a screen is open, never let clicks break/place/use blocks or items. */
+    /** While a screen is open, never let clicks break/place/use blocks or items. Bound blocks open their UI. */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent e) {
-        if (plugin.manager().screen(e.getPlayer()) != null) e.setCancelled(true);
+        if (plugin.manager().screen(e.getPlayer()) != null) {
+            e.setCancelled(true);
+            return;
+        }
+        if (e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null || e.getHand() != EquipmentSlot.HAND) return;
+        String ui = plugin.manager().boundUi(e.getClickedBlock());
+        if (ui == null) return;
+        Player p = e.getPlayer();
+        if (p.isSneaking() && p.hasPermission("silentui.admin")) return; // admins can still reach the real block
+        e.setCancelled(true);
+        dev.silent.silentui.model.UiDefinition def = plugin.registry().get(ui);
+        if (def == null) return;
+        if (!def.settings.permission.isEmpty() && !p.hasPermission(def.settings.permission)) {
+            p.sendMessage(plugin.message("no-permission"));
+            return;
+        }
+        plugin.getServer().getScheduler().runTask(plugin, () -> plugin.manager().openAny(p, def.id));
+    }
+
+    // ------------------------------------------------------------------ chest GUIs
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInventoryClick(org.bukkit.event.inventory.InventoryClickEvent e) {
+        if (!(e.getView().getTopInventory().getHolder() instanceof dev.silent.silentui.render.ChestSession chest)) return;
+        e.setCancelled(true); // nothing can be taken or put in
+        if (e.getClickedInventory() == e.getView().getTopInventory()) chest.click(e.getSlot(), e.getClick());
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void onInventoryDrag(org.bukkit.event.inventory.InventoryDragEvent e) {
+        if (e.getView().getTopInventory().getHolder() instanceof dev.silent.silentui.render.ChestSession) e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onInventoryClose(org.bukkit.event.inventory.InventoryCloseEvent e) {
+        if (!(e.getInventory().getHolder() instanceof dev.silent.silentui.render.ChestSession chest)) return;
+        if (chest.isReopening()) return;
+        if (e.getPlayer() instanceof Player p) plugin.manager().chestClosed(p, chest);
     }
 
     // ------------------------------------------------------------------ keys

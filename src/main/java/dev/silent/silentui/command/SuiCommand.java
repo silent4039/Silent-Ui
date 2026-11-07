@@ -45,6 +45,9 @@ public final class SuiCommand implements TabExecutor {
             case "world" -> world(sender, args);
             case "anim" -> anim(sender, args);
             case "edit" -> edit(sender, args);
+            case "bind" -> bind(sender, args, false);
+            case "unbind" -> bind(sender, args, true);
+            case "import" -> importCmd(sender, args);
             case "ed" -> ed(sender, args);
             case "var" -> var(sender, args);
             case "reload" -> {
@@ -90,7 +93,9 @@ public final class SuiCommand implements TabExecutor {
                 "/sui close [player] <dark_gray>- close the open screen UI",
                 "/sui hud <show|hide|toggle> <ui> [player]",
                 "/sui world place <ui> [name] <dark_gray>- place a world UI in front of you",
-                "/sui world remove <name> | list",
+                "/sui world move <name> | remove <name> | list",
+                "/sui bind <ui> | unbind <dark_gray>- right clicking the block you look at opens the UI",
+                "/sui import decentholograms <dark_gray>- turn DecentHolograms into Silent UI holograms",
                 "/sui edit <ui> <dark_gray>- edit a UI in game",
                 "/sui anim <animation> [player] <dark_gray>- play an animation on the open UI",
                 "/sui var <player> <name> <value> <dark_gray>- set a script variable",
@@ -195,15 +200,22 @@ public final class SuiCommand implements TabExecutor {
                     return;
                 }
                 String name = args.length > 3 ? UiRegistry.cleanId(args[3]) : def.id;
-                Location eye = p.getEyeLocation();
-                double yaw = Math.toRadians(eye.getYaw());
-                Vector forward = new Vector(-Math.sin(yaw), 0, Math.cos(yaw));
-                double height = def.canvas.height * def.settings.worldScale / 100.0;
-                Location origin = eye.clone().add(forward.multiply(Math.max(1.5, height * 0.9 + 1)));
-                origin.setYaw(0);
-                origin.setPitch(0);
-                plugin.manager().placeWorld(name, def, origin, eye.getYaw() + 180f);
-                msg(sender, "<green>Placed world UI <white>" + name + "</white>.");
+                Location origin = placementFor(p, def);
+                plugin.manager().placeWorld(name, def, origin, p.getEyeLocation().getYaw() + 180f);
+                msg(sender, "<green>Placed <white>" + name + "</white>. <gray>Move it with /sui world move " + name);
+            }
+            case "move" -> {
+                if (!(sender instanceof Player p) || args.length < 3) {
+                    msg(sender, "<red>Usage: /sui world move <name>");
+                    return;
+                }
+                WorldUi w = plugin.manager().worlds().get(args[2]);
+                if (w == null) {
+                    msg(sender, "<red>No world UI named " + args[2]);
+                    return;
+                }
+                plugin.manager().placeWorld(args[2], w.def(), placementFor(p, w.def()), p.getEyeLocation().getYaw() + 180f);
+                msg(sender, "<green>Moved " + args[2] + ".");
             }
             case "remove" -> {
                 if (args.length < 3) {
@@ -222,6 +234,107 @@ public final class SuiCommand implements TabExecutor {
                 }
             }
         }
+    }
+
+    /**
+     * Where a world UI goes when placed: holograms stand where you stand, floor UIs lie at your feet,
+     * flat boards float in front of your eyes.
+     */
+    static Location placementFor(Player p, UiDefinition def) {
+        double height = def.canvas.height * def.settings.worldScale / 100.0;
+        Location origin;
+        if (Math.abs(def.settings.tilt) >= 45) {
+            origin = p.getLocation().clone().add(0, def.settings.tilt > 0 ? 0.02 : 2.9, 0);
+        } else if (!"fixed".equalsIgnoreCase(def.settings.billboard)) {
+            origin = p.getLocation().clone().add(0, height / 2 + 0.3, 0);
+        } else {
+            Location eye = p.getEyeLocation();
+            double yaw = Math.toRadians(eye.getYaw());
+            Vector forward = new Vector(-Math.sin(yaw), 0, Math.cos(yaw));
+            origin = eye.clone().add(forward.multiply(Math.max(1.5, height * 0.9 + 1)));
+        }
+        origin.setYaw(0);
+        origin.setPitch(0);
+        return origin;
+    }
+
+    private void bind(CommandSender sender, String[] args, boolean unbind) {
+        if (!admin(sender)) return;
+        if (!(sender instanceof Player p)) {
+            msg(sender, "<red>Players only.");
+            return;
+        }
+        org.bukkit.block.Block b = p.getTargetBlockExact(6);
+        if (b == null || b.getType().isAir()) {
+            msg(sender, "<red>Look at a block (chest, barrel, sign, anything) within 6 blocks.");
+            return;
+        }
+        if (unbind) {
+            String was = plugin.manager().boundUi(b);
+            plugin.manager().bind(b, null);
+            msg(sender, was == null ? "<gray>That block had no UI." : "<green>Unbound " + was + " from that block.");
+            return;
+        }
+        if (args.length < 2) {
+            msg(sender, "<red>Usage: /sui bind <ui>  (while looking at a block)");
+            return;
+        }
+        UiDefinition def = plugin.registry().get(args[1]);
+        if (def == null || def.isWorld() || def.isLogic()) {
+            msg(sender, "<red>Pick a chest GUI, screen UI or HUD: " + args[1]);
+            return;
+        }
+        plugin.manager().bind(b, def.id);
+        msg(sender, "<green>Right clicking that " + b.getType().getKey().getKey().replace('_', ' ') + " now opens <white>" + def.id
+                + "</white>. <gray>Sneak + right click (admins) still opens the real block.");
+    }
+
+    /** /sui import decentholograms : converts every DecentHolograms hologram into a Silent UI hologram. */
+    private void importCmd(CommandSender sender, String[] args) {
+        if (!admin(sender)) return;
+        String from = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
+        if (!from.equals("decentholograms") && !from.equals("dh")) {
+            msg(sender, "<red>Usage: /sui import decentholograms [replace]");
+            return;
+        }
+        boolean replace = args.length > 2 && args[2].equalsIgnoreCase("replace");
+        java.nio.file.Path folder = plugin.getDataFolder().toPath().getParent().resolve("DecentHolograms").resolve("holograms");
+        java.util.List<String> problems = new java.util.ArrayList<>();
+        java.util.List<dev.silent.silentui.util.DecentHologramsImporter.Imported> list;
+        try {
+            list = dev.silent.silentui.util.DecentHologramsImporter.load(folder, problems);
+        } catch (java.io.IOException e) {
+            msg(sender, "<red>Could not read " + folder + ": " + e.getMessage());
+            return;
+        }
+        if (list.isEmpty() && problems.isEmpty()) {
+            msg(sender, "<red>No holograms found in plugins/DecentHolograms/holograms");
+            return;
+        }
+        int made = 0, skipped = 0;
+        for (var i : list) {
+            if (plugin.registry().get(i.def().id) != null && !replace) {
+                skipped++;
+                continue;
+            }
+            try {
+                plugin.registry().save(i.def());
+            } catch (Exception e) {
+                problems.add(i.def().id + ": " + e.getMessage());
+                continue;
+            }
+            plugin.manager().placeWorld(i.def().id, i.def(), i.origin(), 0f);
+            made++;
+        }
+        if (made > 0) {
+            String err = plugin.reloadAll(); // loads the new files and re-places everything from disk
+            if (err != null) problems.add("reload: " + err);
+        }
+        msg(sender, "<green>Imported " + made + " hologram" + (made == 1 ? "" : "s") + "."
+                + (skipped > 0 ? " <gray>" + skipped + " already existed (add <white>replace</white> to overwrite)." : "")
+                + " <gray>Open them in /sui editor to animate them.");
+        for (String pr : problems) msg(sender, "<yellow>  " + pr);
+        if (made > 0) msg(sender, "<gray>Tip: disable DecentHolograms (or delete its holograms) so they don't show twice.");
     }
 
     private void anim(CommandSender sender, String[] args) {
@@ -292,13 +405,15 @@ public final class SuiCommand implements TabExecutor {
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         List<String> out = new ArrayList<>();
         if (args.length == 1) {
-            out.addAll(List.of("open", "close", "edit", "hud", "world", "anim", "var", "reload", "list", "pack", "editor", "help"));
+            out.addAll(List.of("open", "close", "edit", "bind", "unbind", "import", "hud", "world", "anim", "var", "reload", "list", "pack", "editor", "help"));
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "open" -> plugin.registry().all().stream().filter(d -> !d.isWorld() && !d.isLogic()).forEach(d -> out.add(d.id));
                 case "edit" -> plugin.registry().all().stream().filter(d -> !d.isLogic()).forEach(d -> out.add(d.id));
                 case "hud" -> out.addAll(List.of("show", "hide", "toggle"));
-                case "world" -> out.addAll(List.of("place", "remove", "list"));
+                case "world" -> out.addAll(List.of("place", "move", "remove", "list"));
+                case "bind" -> plugin.registry().all().stream().filter(d -> !d.isWorld() && !d.isLogic()).forEach(d -> out.add(d.id));
+                case "import" -> out.add("decentholograms");
                 case "close", "pack", "var" -> Bukkit.getOnlinePlayers().forEach(p -> out.add(p.getName()));
                 case "anim" -> {
                     if (sender instanceof Player p && plugin.manager().screen(p) != null) {

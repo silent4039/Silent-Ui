@@ -252,8 +252,16 @@ public final class DynamicCommands {
             return h;
         }
         if (def.isWorld()) {
-            for (WorldUi w : plugin.manager().worlds().values()) if (w.def().id.equals(def.id) && w.isActive()) return w;
+            for (WorldUi w : plugin.manager().worlds().values()) if (w.def().id.equals(def.id) && w.isActive()) return w.forViewer(p);
             return null;
+        }
+        if (def.isChest()) {
+            dev.silent.silentui.render.ChestSession c = plugin.manager().chest(p);
+            if (c == null || !c.def().id.equals(def.id)) {
+                plugin.manager().openAny(p, def.id);
+                c = plugin.manager().chest(p);
+            }
+            return c;
         }
         ScreenSession s = plugin.manager().screen(p);
         if (s == null || !s.def().id.equals(def.id)) s = plugin.manager().openScreen(p, def);

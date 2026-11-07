@@ -101,6 +101,25 @@ final class ElementView {
                 if (!"image".equals(s.type()) || !s.def.text.isEmpty()) label = ui.spawnDisplay(TextDisplay.class, d -> { });
             }
         }
+        if (label != null) {
+            if (s.def.seeThrough) label.setSeeThrough(true);
+            int bg = argb(s.def.textBg);
+            if (bg != 0) label.setBackgroundColor(org.bukkit.Color.fromARGB(bg));
+        }
+    }
+
+    /** "#AARRGGBB" or "#RRGGBB" (half transparent, like vanilla name tags). 0 = no background. */
+    static int argb(String hex) {
+        if (hex == null) return 0;
+        String h = hex.trim();
+        if (h.startsWith("#")) h = h.substring(1);
+        try {
+            if (h.length() == 8) return (int) Long.parseLong(h, 16);
+            if (h.length() == 6) return 0x80000000 | Integer.parseInt(h, 16);
+        } catch (NumberFormatException ignored) {
+            // fall through
+        }
+        return 0;
     }
 
     private boolean hasBackground() {
@@ -160,7 +179,7 @@ final class ElementView {
         boolean isSprite = g != null;
         if (g == null) g = glyphs.pixel();
         if (g == null) return;
-        TextColor tint = isSprite ? TextColor.color(0xFFFFFF) : Text.color(color, 0xFFFFFF);
+        TextColor tint = isSprite && !s.def.tintSprite ? TextColor.color(0xFFFFFF) : Text.color(color, 0xFFFFFF);
         Component comp = Component.text(String.valueOf(g.ch())).font(GlyphRegistry.FONT_UI).color(tint);
         if (!comp.equals(c.text)) {
             d.text(comp);

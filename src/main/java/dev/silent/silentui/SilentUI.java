@@ -100,6 +100,7 @@ public final class SilentUI extends JavaPlugin {
         }
         dynamicCommands.registerAll();
         manager.loadWorlds();
+        manager.loadBinds();
 
         getServer().getScheduler().runTaskTimer(this, this::tickAll, 1L, 1L);
 

@@ -44,8 +44,12 @@ public abstract class PlaneUi implements UiInstance {
     /** Blocks per canvas pixel. */
     protected final double unit;
     protected final Vector right;
-    protected final Vector up = new Vector(0, 1, 0);
+    protected final Vector up;
     protected final Vector normal;
+    /** Entity pitch of every display: -tilt, so tilt 90 lies flat on the floor facing up. */
+    protected final float displayPitch;
+    /** How the displays turn towards the camera (world UIs only; screens are always FIXED). */
+    protected final Display.Billboard billboard;
 
     protected final Map<String, ElementState> states = new LinkedHashMap<>();
     protected final Map<String, ElementView> views = new LinkedHashMap<>();
@@ -63,9 +67,13 @@ public abstract class PlaneUi implements UiInstance {
         this.origin = origin.clone();
         this.displayYaw = displayYaw;
         this.unit = unit;
-        double rad = Math.toRadians(displayYaw);
-        this.normal = new Vector(-Math.sin(rad), 0, Math.cos(rad));
-        this.right = new Vector(Math.cos(rad), 0, Math.sin(rad));
+        this.billboard = def.isWorld() ? parseBillboard(def.settings.billboard) : Display.Billboard.FIXED;
+        this.displayPitch = def.isWorld() && billboard == Display.Billboard.FIXED
+                ? (float) -Math.max(-90, Math.min(90, def.settings.tilt)) : 0f;
+        Vector[] f = frame(displayYaw, displayPitch);
+        this.right = f[0];
+        this.up = f[1];
+        this.normal = f[2];
         for (ElementDef e : def.elements) states.put(e.id, new ElementState(e));
         this.animations = new AnimationPlayer(def, states, this::refresh, true);
     }
@@ -157,6 +165,44 @@ public abstract class PlaneUi implements UiInstance {
         }
     }
 
+    static Display.Billboard parseBillboard(String s) {
+        if (s == null) return Display.Billboard.FIXED;
+        return switch (s.toLowerCase(java.util.Locale.ROOT)) {
+            case "center", "centre", "always", "face" -> Display.Billboard.CENTER;
+            case "vertical", "yaw" -> Display.Billboard.VERTICAL;
+            case "horizontal", "pitch" -> Display.Billboard.HORIZONTAL;
+            default -> Display.Billboard.FIXED;
+        };
+    }
+
+    /**
+     * right / up / normal of a display rotated by (yaw, pitch), matching the client's
+     * rotationYXZ(-yaw, pitch, 0) so clicks land exactly where the glyphs are drawn.
+     */
+    static Vector[] frame(double yawDeg, double pitchDeg) {
+        double d = Math.toRadians(yawDeg), p = Math.toRadians(pitchDeg);
+        double sd = Math.sin(d), cd = Math.cos(d), sp = Math.sin(p), cp = Math.cos(p);
+        return new Vector[]{
+                new Vector(cd, 0, sd),
+                new Vector(-sp * sd, cp, sp * cd),
+                new Vector(-sd * cp, -sp, cd * cp)};
+    }
+
+    /** The plane as this eye sees it: billboarded UIs turn to face each viewer's camera. */
+    Vector[] frameFor(Location eye) {
+        return switch (billboard) {
+            case FIXED -> new Vector[]{right, up, normal};
+            case CENTER -> frame(eye.getYaw() + 180, -eye.getPitch());
+            case VERTICAL -> frame(eye.getYaw() + 180, displayPitch);
+            case HORIZONTAL -> frame(displayYaw, -eye.getPitch());
+        };
+    }
+
+    /** Display view range multiplier (1 = 64 blocks). */
+    protected float viewRangeMultiplier() {
+        return 0.6f;
+    }
+
     static boolean isTurnable(ElementState s) {
         String t = s.type();
         return "item".equals(t) || "head".equals(t) || "model".equals(t);
@@ -179,17 +225,17 @@ public abstract class PlaneUi implements UiInstance {
     <T extends Display> T spawnDisplay(Class<T> cls, Consumer<T> init) {
         Location loc = origin.clone();
         loc.setYaw(displayYaw);
-        loc.setPitch(0);
+        loc.setPitch(displayPitch);
         World world = origin.getWorld();
         T d = world.spawn(loc, cls, e -> {
             e.setPersistent(false);
             e.addScoreboardTag(TAG);
             e.setVisibleByDefault(visibleByDefault());
-            e.setBillboard(Display.Billboard.FIXED);
+            e.setBillboard(billboard);
             e.setBrightness(new Display.Brightness(15, 15));
             e.setShadowRadius(0);
             e.setShadowStrength(0);
-            e.setViewRange(visibleByDefault() ? 1.0f : 0.6f);
+            e.setViewRange(viewRangeMultiplier());
             e.setInterpolationDuration(0);
             e.setTeleportDuration(0);
             if (e instanceof TextDisplay t) {
@@ -341,15 +387,16 @@ public abstract class PlaneUi implements UiInstance {
 
     /** Ray from the eye to the canvas, in canvas pixels; null if the ray misses the plane. */
     public double[] project(Location eye, double maxDistance) {
+        Vector[] f = frameFor(eye);
         Vector e = eye.toVector();
         Vector d = eye.getDirection();
-        double denom = d.dot(normal);
+        double denom = d.dot(f[2]);
         if (denom > -1e-4) return null; // looking away or from behind
-        double t = origin.toVector().subtract(e).dot(normal) / denom;
+        double t = origin.toVector().subtract(e).dot(f[2]) / denom;
         if (t <= 0 || t > maxDistance) return null;
         Vector hit = e.add(d.multiply(t)).subtract(origin.toVector());
-        double ux = hit.dot(right) / unit + def.canvas.width / 2.0;
-        double uy = def.canvas.height / 2.0 - hit.dot(up) / unit;
+        double ux = hit.dot(f[0]) / unit + def.canvas.width / 2.0;
+        double uy = def.canvas.height / 2.0 - hit.dot(f[1]) / unit;
         return new double[]{ux, uy};
     }
 

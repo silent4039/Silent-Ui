@@ -111,6 +111,26 @@ public final class UiRegistry {
         if (def.script.nodes == null) def.script.nodes = new java.util.ArrayList<>();
         if (def.tabs == null) def.tabs = new java.util.LinkedHashMap<>();
         if (def.commands == null) def.commands = new java.util.ArrayList<>();
+        if (def.slots == null) def.slots = new java.util.ArrayList<>();
+        def.slots.removeIf(s -> s == null || s.slot < 0 || s.slot >= 54);
+        for (UiDefinition.SlotDef s : def.slots) {
+            if (s.frames == null) s.frames = new java.util.ArrayList<>();
+            if (s.item == null) s.item = "minecraft:stone";
+            if (s.name == null) s.name = "";
+            if (s.lore == null) s.lore = "";
+            if (s.itemModel == null) s.itemModel = "";
+            if (s.headOwner == null) s.headOwner = "";
+            s.amount = Math.max(1, Math.min(99, s.amount));
+            s.frameTicks = Math.max(1, s.frameTicks);
+        }
+        def.settings.rows = Math.max(1, Math.min(6, def.settings.rows));
+        def.settings.guiTop = Math.max(0, Math.min(64, def.settings.guiTop));
+        if (def.settings.billboard == null) def.settings.billboard = "fixed";
+        if (def.settings.title == null) def.settings.title = "";
+        if (def.isChest()) {
+            def.canvas.width = 176;
+            def.canvas.height = def.settings.guiTop + def.settings.rows * 18 + 114;
+        }
         def.commands.removeIf(c -> c == null || c.name == null || c.name.isBlank());
         for (UiDefinition.CommandDef c : def.commands) {
             c.name = c.name.trim().toLowerCase(Locale.ROOT).replaceFirst("^/+", "").replaceAll("[^a-z0-9_\\-]", "");
@@ -148,6 +168,8 @@ public final class UiRegistry {
             if (e.headOwner == null) e.headOwner = "";
             if (e.anchor == null) e.anchor = "center";
             if (e.align == null) e.align = "center";
+            if (e.textBg == null) e.textBg = "";
+            if (e.tooltip == null) e.tooltip = "";
             e.w = Math.max(1, e.w);
             e.h = Math.max(1, e.h);
             if (e.textSize <= 0) e.textSize = 1;

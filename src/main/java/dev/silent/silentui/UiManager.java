@@ -53,6 +53,63 @@ public final class UiManager {
     }
 
     private final Map<String, dev.silent.silentui.script.LogicInstance> logic = new HashMap<>();
+    private final Map<UUID, dev.silent.silentui.render.ChestSession> chests = new HashMap<>();
+    /** Blocks that open a UI when right clicked: "world:x:y:z" -> ui id */
+    private final Map<String, String> binds = new LinkedHashMap<>();
+
+    public dev.silent.silentui.render.ChestSession chest(Player p) {
+        return chests.get(p.getUniqueId());
+    }
+
+    public dev.silent.silentui.render.ChestSession openChest(Player p, UiDefinition def) {
+        closeScreen(p);
+        dev.silent.silentui.render.ChestSession old = chests.remove(p.getUniqueId());
+        if (old != null) old.closed();
+        dev.silent.silentui.render.ChestSession s = new dev.silent.silentui.render.ChestSession(plugin, def, p);
+        chests.put(p.getUniqueId(), s);
+        s.open();
+        return s;
+    }
+
+    /** Called when the player closes the chest GUI (not when it reopens to redraw its title). */
+    public void chestClosed(Player p, dev.silent.silentui.render.ChestSession s) {
+        if (chests.get(p.getUniqueId()) == s) chests.remove(p.getUniqueId());
+        s.closed();
+    }
+
+    // ------------------------------------------------------------------ block bindings
+
+    public static String blockKey(org.bukkit.block.Block b) {
+        return b.getWorld().getName() + ":" + b.getX() + ":" + b.getY() + ":" + b.getZ();
+    }
+
+    public String boundUi(org.bukkit.block.Block b) {
+        return binds.get(blockKey(b));
+    }
+
+    public void bind(org.bukkit.block.Block b, String uiId) {
+        if (uiId == null) binds.remove(blockKey(b));
+        else binds.put(blockKey(b), uiId);
+        YamlConfiguration yml = new YamlConfiguration();
+        for (Map.Entry<String, String> e : binds.entrySet()) yml.set("binds." + e.getKey().replace('.', '_'), e.getValue());
+        try {
+            yml.save(new File(plugin.getDataFolder(), "block-binds.yml"));
+        } catch (IOException ex) {
+            plugin.getLogger().warning("[SilentUI] Could not save block-binds.yml: " + ex.getMessage());
+        }
+    }
+
+    public Map<String, String> binds() {
+        return binds;
+    }
+
+    public void loadBinds() {
+        binds.clear();
+        YamlConfiguration yml = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "block-binds.yml"));
+        ConfigurationSection sec = yml.getConfigurationSection("binds");
+        if (sec == null) return;
+        for (String k : sec.getKeys(false)) binds.put(k, sec.getString(k));
+    }
 
     /** The running instance of a UI for this player (open screen, shown HUD, placed world UI) or a logic runtime. */
     public UiInstance instanceFor(Player p, String id) {
@@ -61,10 +118,12 @@ public final class UiManager {
         if (p != null) {
             ScreenSession s = screen(p);
             if (s != null && s.def().id.equals(def.id)) return s;
+            dev.silent.silentui.render.ChestSession c = chest(p);
+            if (c != null && c.def().id.equals(def.id) && c.isActive()) return c;
             UiInstance h = plugin.hud().instance(p, def.id);
             if (h != null) return h;
         }
-        for (WorldUi w : worlds.values()) if (w.def().id.equals(def.id) && w.isActive()) return w;
+        for (WorldUi w : worlds.values()) if (w.def().id.equals(def.id) && w.isActive()) return w.forViewer(p);
         return logic.computeIfAbsent(def.id, k -> new dev.silent.silentui.script.LogicInstance(def));
     }
 
@@ -102,6 +161,10 @@ public final class UiManager {
         if (def == null) return false;
         if (def.isHud()) return plugin.hud().show(p, def.id);
         if (def.isWorld() || def.isLogic()) return false;
+        if (def.isChest()) {
+            openChest(p, def);
+            return true;
+        }
         openScreen(p, def);
         return true;
     }
@@ -130,6 +193,11 @@ public final class UiManager {
 
     public void closeAll() {
         for (ScreenSession s : new ArrayList<>(screens.values())) closeScreen(s.player());
+        for (dev.silent.silentui.render.ChestSession c : new ArrayList<>(chests.values())) {
+            c.closed();
+            if (c.player().isOnline() && c.player().getOpenInventory().getTopInventory().getHolder() == c) c.player().closeInventory();
+        }
+        chests.clear();
     }
 
     public Collection<ScreenSession> screens() {
@@ -203,6 +271,7 @@ public final class UiManager {
             if (!ui.isActive()) return;
             String clean = sanitize(values.getOrDefault("value", ""));
             if (ui instanceof PlaneUi plane) plane.submitInput(p, elementId, clean);
+            else if (ui instanceof dev.silent.silentui.render.ChestSession chest) chest.submitInput(p, elementId, clean);
             else if (ui instanceof HudInstance hud) hud.submitInput(p, elementId, clean);
         });
         if (shown) return;
@@ -220,6 +289,7 @@ public final class UiManager {
             if (message.equalsIgnoreCase("cancel")) return;
             String clean = sanitize(message);
             if (cur.ui() instanceof PlaneUi plane) plane.submitInput(p, cur.elementId(), clean);
+            else if (cur.ui() instanceof dev.silent.silentui.render.ChestSession chest) chest.submitInput(p, cur.elementId(), clean);
             else if (cur.ui() instanceof HudInstance hud) hud.submitInput(p, cur.elementId(), clean);
         });
         return true;
@@ -241,6 +311,15 @@ public final class UiManager {
         if (w.isLoaded()) spawnWorld(w);
         saveWorlds();
         return w;
+    }
+
+    /** Per-player hologram copies register their own hitboxes. */
+    public void trackHitbox(PlaneUi ui) {
+        if (ui.hitbox() != null) hitboxes.put(ui.hitbox().getUniqueId(), ui);
+    }
+
+    public void untrackHitbox(PlaneUi ui) {
+        if (ui.hitbox() != null) hitboxes.remove(ui.hitbox().getUniqueId());
     }
 
     private void spawnWorld(WorldUi w) {
@@ -317,6 +396,10 @@ public final class UiManager {
     // ------------------------------------------------------------------ tick
 
     public void tick() {
+        for (dev.silent.silentui.render.ChestSession c : new ArrayList<>(chests.values())) {
+            if (!c.isActive()) chests.remove(c.player().getUniqueId());
+            else c.tick();
+        }
         for (ScreenSession s : new ArrayList<>(screens.values())) {
             if (!s.player().isOnline()) {
                 closeScreen(s.player());

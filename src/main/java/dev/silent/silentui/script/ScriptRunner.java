@@ -246,6 +246,13 @@ public final class ScriptRunner {
                 return ThreadLocalRandom.current().nextDouble() < chance ? "true" : "false";
             }
             case "switch_tab" -> ui.switchTab(n.prop("tabset", ""), p(ui, player, n, "page", "", x));
+            case "next_tab" -> ui.nextTab(n.prop("tabset", ""), "previous".equalsIgnoreCase(n.prop("direction", "next")) ? -1 : 1);
+            case "set_slot" -> {
+                if (ui instanceof dev.silent.silentui.render.ChestSession chest) {
+                    int slot = (int) Text.num(p(ui, player, n, "slot", "0", x), -1);
+                    if (slot >= 0) chest.setSlot(slot, p(ui, player, n, "item", "", x), n.prop("name", ""), n.prop("lore", ""), p(ui, player, n, "amount", "", x));
+                }
+            }
             case "show_group" -> ui.setGroupVisible(n.prop("group", ""), true);
             case "hide_group" -> ui.setGroupVisible(n.prop("group", ""), false);
             case "toggle_group" -> ui.setGroupVisible(n.prop("group", ""), null);

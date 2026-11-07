@@ -46,10 +46,8 @@ public final class PackBuilder {
     private final Map<String, byte[]> files = new LinkedHashMap<>();
     private final GlyphRegistry glyphs = new GlyphRegistry();
     private final JsonArray uiProviders = new JsonArray();
-    private final JsonArray hudProviders = new JsonArray();
     private final Map<String, BufferedImage> spriteImages = new HashMap<>();
     private char nextUi = '';
-    private char nextHud = '';
     private int imageCounter = 0;
 
     public PackBuilder(Logger log, int packFormat, String bossbarColor) {
@@ -64,6 +62,10 @@ public final class PackBuilder {
         writeSpaceFont();
         writeFxFont();
         writeBossbarTextures();
+        // invisible item model: clickable chest slots that show nothing
+        files.put("assets/silentui/items/blank.json", "{\"model\":{\"type\":\"minecraft:empty\"}}".getBytes(StandardCharsets.UTF_8));
+        hudTarget = new Target("hud", glyphs.hudGlyphs, glyphs.hudTextFonts, GlyphRegistry.HUD_BASE_Y + 7);
+        guiTarget = new Target("gui", glyphs.guiGlyphs, glyphs.guiTextFonts, GlyphRegistry.GUI_BASELINE);
 
         for (UiDefinition ui : uis) {
             for (SpriteDef s : ui.sprites) {
@@ -73,13 +75,15 @@ public final class PackBuilder {
                     continue;
                 }
                 spriteImages.put(GlyphRegistry.spriteKey(ui.id, s.id), img);
-                if (!ui.isHud()) addUiSprite(ui.id, s.id, img);
+                if (!ui.isHud() && !ui.isChest()) addUiSprite(ui.id, s.id, img);
             }
-            if (ui.isHud()) addHud(ui);
+            if (ui.isHud()) addGlyphUi(ui, hudTarget, 0);
+            if (ui.isChest()) addGlyphUi(ui, guiTarget, -ui.settings.guiTop);
         }
 
         files.put("assets/silentui/font/ui.json", fontJson(uiProviders));
-        files.put("assets/silentui/font/hud.json", fontJson(hudProviders));
+        files.put("assets/silentui/font/hud.json", fontJson(hudTarget.providers));
+        files.put("assets/silentui/font/gui.json", fontJson(guiTarget.providers));
 
         byte[] zip = zip();
         byte[] sha1;
@@ -163,9 +167,28 @@ public final class PackBuilder {
         glyphs.uiGlyphs.put(GlyphRegistry.spriteKey(uiId, spriteId), new GlyphRegistry.UiGlyph(ch, drawn, advance));
     }
 
-    // ------------------------------------------------------------------ HUD
+    // ------------------------------------------------------------------ HUD + chest GUI title glyphs
 
-    private void addHud(UiDefinition ui) throws IOException {
+    /** Where pixel-exact glyphs go: the bossbar HUD (text baseline at y=10) or a chest title (baseline at y=13). */
+    private final class Target {
+        final String name;
+        final JsonArray providers = new JsonArray();
+        final Map<String, GlyphRegistry.HudGlyph> map;
+        final Map<Integer, Key> textFonts;
+        final int baseline;
+        char next = '';
+
+        Target(String name, Map<String, GlyphRegistry.HudGlyph> map, Map<Integer, Key> textFonts, int baseline) {
+            this.name = name;
+            this.map = map;
+            this.textFonts = textFonts;
+            this.baseline = baseline;
+        }
+    }
+
+    private Target hudTarget, guiTarget;
+
+    private void addGlyphUi(UiDefinition ui, Target t, int yShift) throws IOException {
         Map<String, TreeSet<Integer>> yValues = HudLayout.yValues(ui);
         TreeSet<Integer> textYs = new TreeSet<>();
         for (ElementDef e : ui.elements) {
@@ -173,20 +196,20 @@ public final class PackBuilder {
             int w = HudLayout.round(e.w), h = HudLayout.round(e.h);
             switch (e.type) {
                 case "text" -> {
-                    if (e.fillEnabled && !e.sprite.isEmpty()) for (int y : ys) hudGlyph(ui, e.sprite, w, h, y);
+                    if (e.fillEnabled && !e.sprite.isEmpty()) for (int y : ys) glyph(t, ui, e.sprite, w, h, y, yShift);
                     for (int y : ys) textYs.add(HudLayout.labelY(y, h));
                 }
                 case "progress" -> {
                     for (int y : ys) {
-                        if (e.fillEnabled) hudGlyph(ui, e.sprite, w, h, y);
-                        for (int p = 1; p <= w; p <<= 1) hudGlyph(ui, "", p, h, y);
+                        if (e.fillEnabled) glyph(t, ui, e.sprite, w, h, y, yShift);
+                        for (int p = 1; p <= w; p <<= 1) glyph(t, ui, "", p, h, y, yShift);
                     }
                 }
-                case "item", "head", "model" -> { /* not available on HUDs */ }
+                case "item", "head", "model" -> { /* drawn as real items (chest slots) or not at all (HUD) */ }
                 default -> { // rect, image, button, input
                     for (int y : ys) {
-                        if (e.fillEnabled || !e.sprite.isEmpty()) hudGlyph(ui, e.sprite, w, h, y);
-                        for (String alt : HudLayout.alternateSprites(ui, e)) hudGlyph(ui, alt, w, h, y);
+                        if (e.fillEnabled || !e.sprite.isEmpty()) glyph(t, ui, e.sprite, w, h, y, yShift);
+                        for (String alt : HudLayout.alternateSprites(ui, e)) glyph(t, ui, alt, w, h, y, yShift);
                         if (!e.text.isEmpty() || "input".equals(e.type) || "button".equals(e.type)) {
                             textYs.add(HudLayout.labelY(y, h));
                         }
@@ -194,13 +217,14 @@ public final class PackBuilder {
                 }
             }
         }
-        for (int y : textYs) addHudTextFont(y);
+        for (int y : textYs) addTextFont(t, y, yShift);
     }
 
-    private void hudGlyph(UiDefinition ui, String spriteId, int w, int h, int y) throws IOException {
+    private void glyph(Target t, UiDefinition ui, String spriteId, int w, int h, int y, int yShift) throws IOException {
         String spriteKey = spriteId == null || spriteId.isEmpty() ? "#pixel" : GlyphRegistry.spriteKey(ui.id, spriteId);
-        String key = GlyphRegistry.hudKey(spriteKey, w, h, y);
-        if (glyphs.hudGlyphs.containsKey(key)) return;
+        // keys use the effective (container-relative) y so chest UIs with different guiTop never collide
+        String key = GlyphRegistry.hudKey(spriteKey, w, h, y + yShift);
+        if (t.map.containsKey(key) || w <= 0 || h <= 0) return;
         BufferedImage base;
         if ("#pixel".equals(spriteKey)) {
             base = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
@@ -210,7 +234,7 @@ public final class PackBuilder {
             if (src == null) return;
             base = resize(src, w, h);
         }
-        int ascent = GlyphRegistry.HUD_BASE_Y + 7 - y;
+        int ascent = t.baseline - (y + yShift);
         int height = h;
         if (ascent > height) {
             // pad with transparent rows so ascent <= height (glyph stays in the same place)
@@ -220,20 +244,20 @@ public final class PackBuilder {
             height = ascent;
         }
         base = keepWidth(base);
-        if (nextHud >= '') {
-            log.warning("[SilentUI] Too many HUD glyphs, some HUD pieces will not render.");
+        if (t.next >= '') {
+            log.warning("[SilentUI] Too many " + t.name + " glyphs, some pieces will not render.");
             return;
         }
-        char ch = nextHud++;
-        String name = "h" + (imageCounter++);
-        files.put("assets/silentui/textures/hud/" + name + ".png", png(base));
-        hudProviders.add(bitmap("silentui:hud/" + name + ".png", height, ascent, ch));
-        glyphs.hudGlyphs.put(key, new GlyphRegistry.HudGlyph(ch, w, w + 1));
+        char ch = t.next++;
+        String name = t.name.charAt(0) + "" + (imageCounter++);
+        files.put("assets/silentui/textures/" + t.name + "/" + name + ".png", png(base));
+        t.providers.add(bitmap("silentui:" + t.name + "/" + name + ".png", height, ascent, ch));
+        t.map.put(key, new GlyphRegistry.HudGlyph(ch, w, w + 1));
     }
 
-    private void addHudTextFont(int y) {
-        if (glyphs.hudTextFonts.containsKey(y)) return;
-        int ascent = Math.min(8, GlyphRegistry.HUD_BASE_Y + 7 - y);
+    private void addTextFont(Target t, int y, int yShift) {
+        if (t.textFonts.containsKey(y + yShift)) return;
+        int ascent = Math.min(8, t.baseline - (y + yShift));
         JsonArray providers = new JsonArray();
         JsonObject space = new JsonObject();
         space.addProperty("type", "space");
@@ -259,9 +283,12 @@ public final class PackBuilder {
         }
         ascii.add("chars", chars);
         providers.add(ascii);
-        String name = "hud_t" + (y < 0 ? "m" + (-y) : String.valueOf(y));
-        files.put("assets/silentui/font/" + name + ".json", fontJson(providers));
-        glyphs.hudTextFonts.put(y, Key.key("silentui", name));
+        int eff = y + yShift;
+        String name = t.name + "_t" + (eff < 0 ? "m" + (-eff) : String.valueOf(eff));
+        if (!files.containsKey("assets/silentui/font/" + name + ".json")) {
+            files.put("assets/silentui/font/" + name + ".json", fontJson(providers));
+        }
+        t.textFonts.put(eff, Key.key("silentui", name));
     }
 
     // ------------------------------------------------------------------ helpers

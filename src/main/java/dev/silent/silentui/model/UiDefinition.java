@@ -27,12 +27,21 @@ public final class UiDefinition {
     public Map<String, String> tabs = new java.util.LinkedHashMap<>();
     /** Custom commands with typed arguments. */
     public List<CommandDef> commands = new ArrayList<>();
+    /** Chest GUIs: what sits in each inventory slot. */
+    public List<SlotDef> slots = new ArrayList<>();
 
     public boolean isHud() { return "hud".equalsIgnoreCase(type); }
     public boolean isWorld() { return "world".equalsIgnoreCase(type); }
     /** Logic-only file: commands and functions, nothing drawn. */
     public boolean isLogic() { return "logic".equalsIgnoreCase(type); }
-    public boolean isScreen() { return !isHud() && !isWorld() && !isLogic(); }
+    /** A real chest inventory with a custom background drawn in its title. */
+    public boolean isChest() { return "chest".equalsIgnoreCase(type); }
+    public boolean isScreen() { return !isHud() && !isWorld() && !isLogic() && !isChest(); }
+
+    public SlotDef slot(int index) {
+        for (SlotDef s : slots) if (s.slot == index) return s;
+        return null;
+    }
 
     public ElementDef element(String elementId) {
         if (elementId == null) return null;
@@ -77,6 +86,38 @@ public final class UiDefinition {
         public boolean autoShow = false;
         /** World UI: blocks per 100 canvas pixels. */
         public double worldScale = 1.0;
+        /** World UI / hologram: fixed | center (always faces you) | vertical (turns left/right only) */
+        public String billboard = "fixed";
+        /** World UI: each player gets their own copy (their placeholders, their state). */
+        public boolean perPlayer = false;
+        /** World UI: how far away it is visible, in blocks. */
+        public double viewRange = 48;
+        /** World UI: 0 = upright, 90 = lying flat on the floor facing up, -90 = on the ceiling. */
+        public double tilt = 0;
+        /** Chest GUI: rows (1-6). */
+        public int rows = 6;
+        /** Chest GUI: extra canvas pixels above the chest (for headers that stick out). */
+        public int guiTop = 0;
+        /** Chest GUI: plain title shown when the pack is missing, and as accessibility text. */
+        public String title = "";
+    }
+
+    public static final class SlotDef {
+        public int slot = 0;
+        public String item = "minecraft:stone";
+        public int amount = 1;
+        public String name = "";
+        /** Lore lines separated by "|" or new lines. */
+        public String lore = "";
+        public boolean glint = false;
+        public String itemModel = "";
+        public String headOwner = "";
+        /** Invisible but clickable (draw the button in the background instead). */
+        public boolean blank = false;
+        public boolean hideTooltip = false;
+        /** Animated slot: item ids cycled every frameTicks. */
+        public List<String> frames = new ArrayList<>();
+        public int frameTicks = 10;
     }
 
     public static final class SpriteDef {
@@ -147,6 +188,15 @@ public final class UiDefinition {
         public double spin = 0;
         /** item/head/model: scrolling over it rotates it */
         public boolean rotatable = false;
+
+        /** Text background colour #AARRGGBB (holograms), empty = none. */
+        public String textBg = "";
+        /** Text stays visible through blocks. */
+        public boolean seeThrough = false;
+        /** Colour sprites with the fill colour (lets colour animations recolour sprites). */
+        public boolean tintSprite = false;
+        /** Chest GUI: hover text for the slots this element covers. */
+        public String tooltip = "";
     }
 
     public static final class CommandDef {

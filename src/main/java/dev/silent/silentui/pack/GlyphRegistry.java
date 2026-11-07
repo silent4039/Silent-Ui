@@ -13,6 +13,11 @@ public final class GlyphRegistry {
 
     public static final Key FONT_UI = Key.key("silentui", "ui");
     public static final Key FONT_HUD = Key.key("silentui", "hud");
+    public static final Key FONT_GUI = Key.key("silentui", "gui");
+    /** Chest titles are drawn at y=6, so their text baseline sits at y=13 from the top of the chest. */
+    public static final int GUI_BASELINE = 13;
+    /** Item model that renders nothing (assets/silentui/items/blank.json). */
+    public static final String BLANK_MODEL = "silentui:blank";
     public static final Key FONT_SPACE = Key.key("silentui", "space");
     public static final Key FONT_FX = Key.key("silentui", "fx");
 
@@ -33,6 +38,27 @@ public final class GlyphRegistry {
     final Map<String, UiGlyph> uiGlyphs = new HashMap<>();
     final Map<String, HudGlyph> hudGlyphs = new HashMap<>();
     final Map<Integer, Key> hudTextFonts = new HashMap<>();
+    final Map<String, HudGlyph> guiGlyphs = new HashMap<>();
+    final Map<Integer, Key> guiTextFonts = new HashMap<>();
+
+    /** One family of pixel-exact glyphs (HUD or chest title). */
+    public record GlyphSet(Key font, Map<String, HudGlyph> glyphs, Map<Integer, Key> textFonts) {
+        public HudGlyph get(String spriteKey, int w, int h, int y) {
+            return glyphs.get(hudKey(spriteKey, w, h, y));
+        }
+
+        public Key textFont(int y) {
+            return textFonts.get(y);
+        }
+    }
+
+    public GlyphSet hudSet() {
+        return new GlyphSet(FONT_HUD, hudGlyphs, hudTextFonts);
+    }
+
+    public GlyphSet guiSet() {
+        return new GlyphSet(FONT_GUI, guiGlyphs, guiTextFonts);
+    }
 
     public static String spriteKey(String uiId, String spriteId) {
         return uiId + ":" + spriteId;

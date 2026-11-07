@@ -54,7 +54,11 @@ public final class AnimationPlayer {
                         KeyDef k = tr.keys.get(i);
                         if (k.t >= 0 && k.t <= def.length) bp.add(k.t);
                         if ("step".equals(k.ease)) step = true;
-                        if (i + 1 < tr.keys.size() && !"linear".equals(k.ease) && !"step".equals(k.ease)) {
+                        // colours can't be interpolated by the client and big turns would take the short way round,
+                        // so those always move in 2 tick steps, like non-linear easings
+                        boolean fine = isColor(tr.property) || "turn".equals(tr.property)
+                                ? !"step".equals(k.ease) : !"linear".equals(k.ease) && !"step".equals(k.ease);
+                        if (i + 1 < tr.keys.size() && fine) {
                             for (int s = k.t + 2; s < tr.keys.get(i + 1).t; s += 2) bp.add(s);
                         }
                     }
@@ -98,7 +102,7 @@ public final class AnimationPlayer {
             if (!a.primed) {
                 a.primed = true;
                 for (String el : a.tracksByElement.keySet()) {
-                    apply(a, el, 0);
+                    apply(a, el, 0, 0);
                     push.accept(el, 0);
                 }
                 if (segmentMode) continue; // start segments next tick
@@ -110,17 +114,17 @@ public final class AnimationPlayer {
                     if (idx < 0) continue;
                     String el = e.getKey();
                     if (Boolean.TRUE.equals(a.stepped.get(el))) {
-                        apply(a, el, a.t);
+                        apply(a, el, a.t, a.t);
                         push.accept(el, 0);
                     } else if (idx + 1 < bps.length) {
                         int next = bps[idx + 1];
-                        apply(a, el, next);
+                        apply(a, el, next, a.t);
                         push.accept(el, next - a.t);
                     }
                 }
             } else {
                 for (String el : a.tracksByElement.keySet()) {
-                    apply(a, el, a.t);
+                    apply(a, el, a.t, a.t);
                     push.accept(el, 1);
                 }
             }
@@ -136,10 +140,31 @@ public final class AnimationPlayer {
         }
     }
 
-    private void apply(Active a, String elementId, int t) {
+    static boolean isColor(String property) {
+        return "color".equals(property) || "fill".equals(property) || "textColor".equals(property);
+    }
+
+    /**
+     * Applies every track of the element. Motion uses {@code t} (where the client should glide to);
+     * colours use {@code colorT} (now), because colour changes are instant on the client.
+     */
+    private void apply(Active a, String elementId, int t, int colorT) {
         ElementState st = states.get(elementId);
         if (st == null) return;
         for (TrackDef tr : a.tracksByElement.getOrDefault(elementId, List.of())) {
+            if (isColor(tr.property)) {
+                String hex = String.format("#%06x", sampleColor(tr.keys, colorT));
+                boolean textual = "text".equals(st.type()) || "button".equals(st.type()) || "input".equals(st.type());
+                switch (tr.property) {
+                    case "fill" -> st.fill = hex;
+                    case "textColor" -> st.textColor = hex;
+                    default -> {
+                        if (textual) st.textColor = hex;
+                        else st.fill = hex;
+                    }
+                }
+                continue;
+            }
             double v = sample(tr.keys, t);
             switch (tr.property) {
                 case "x" -> st.x = v;
@@ -149,6 +174,7 @@ public final class AnimationPlayer {
                 case "scale" -> st.scale = Math.max(0, v);
                 case "rotation" -> st.rotation = v;
                 case "opacity" -> st.opacity = Math.max(0, Math.min(1, v));
+                case "turn" -> st.turn = v;
                 default -> { }
             }
         }
@@ -168,6 +194,26 @@ public final class AnimationPlayer {
             }
         }
         return keys.get(keys.size() - 1).v;
+    }
+
+    /** Colour keys store 0xRRGGBB in v; channels blend separately so red to blue passes through purple. */
+    public static int sampleColor(List<KeyDef> keys, double t) {
+        if (keys.isEmpty()) return 0xFFFFFF;
+        KeyDef first = keys.get(0);
+        if (t <= first.t) return (int) first.v;
+        for (int i = 0; i < keys.size() - 1; i++) {
+            KeyDef a = keys.get(i), b = keys.get(i + 1);
+            if (t >= a.t && t <= b.t) {
+                if (b.t == a.t || "step".equals(a.ease)) return (int) (t >= b.t ? b.v : a.v);
+                double f = ease(a.ease, (t - a.t) / (double) (b.t - a.t));
+                int ca = (int) a.v, cb = (int) b.v;
+                int r = (int) Math.round(((ca >> 16) & 255) + (((cb >> 16) & 255) - ((ca >> 16) & 255)) * f);
+                int g = (int) Math.round(((ca >> 8) & 255) + (((cb >> 8) & 255) - ((ca >> 8) & 255)) * f);
+                int bl = (int) Math.round((ca & 255) + ((cb & 255) - (ca & 255)) * f);
+                return (Math.max(0, Math.min(255, r)) << 16) | (Math.max(0, Math.min(255, g)) << 8) | Math.max(0, Math.min(255, bl));
+            }
+        }
+        return (int) keys.get(keys.size() - 1).v;
     }
 
     public static double ease(String type, double f) {
